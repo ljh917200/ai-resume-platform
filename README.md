@@ -1,12 +1,11 @@
-# ai-resume-platform
 AI智能简历优化平台
 项目简介
 
 
-AI智能简历优化平台是一个基于Spring Boot + Vue 3的全栈Web应用，通过接入DeepSeek大模型API，帮助用户智能优化简历内容，提升简历竞争力。
+AI智能简历优化平台是一个基于 Spring Boot + Vue 3 的全栈Web应用，通过接入 DeepSeek 大模型API，帮助用户智能优化简历内容，提升简历竞争力。
 
 
-核心功能：
+核心功能
 
 
 用户注册/登录（JWT认证）
@@ -16,10 +15,12 @@ AI智能优化简历内容
 简历历史记录管理
 
 
-在线访问： http://8.138.190.51
+在线访问：http://8.138.190.51
 
 
 技术栈
+
+
 后端
 
 
@@ -31,6 +32,8 @@ JWT	0.12.x	身份认证
 DeepSeek API	-	AI大模型接口
 Apache POI	5.x	Word文件解析
 Apache PDFBox	3.x	PDF文件解析
+
+
 前端
 
 
@@ -41,6 +44,8 @@ Element Plus	2.x	UI组件库
 Axios	1.x	HTTP请求库
 Vue Router	4.x	路由管理
 Pinia	2.x	状态管理
+
+
 部署
 
 
@@ -54,82 +59,39 @@ Nginx	Web服务器、反向代理
 
 plaintext
 ai-resume-platform/
-├── backend/                          # 后端项目
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/resume/airesume/
-│   │   │   │   ├── config/           # 配置类
-│   │   │   │   │   ├── DeepSeekConfig.java      # DeepSeek配置
-│   │   │   │   │   ├── CorsConfig.java          # 跨域配置
-│   │   │   │   │   └── JwtConfig.java           # JWT配置
-│   │   │   │   ├── controller/       # 控制器层
-│   │   │   │   │   ├── AuthController.java      # 认证接口
-│   │   │   │   │   ├── ResumeController.java    # 简历接口
-│   │   │   │   │   └── AiController.java        # AI优化接口
-│   │   │   │   ├── service/          # 服务层
-│   │   │   │   │   ├── UserService.java
-│   │   │   │   │   ├── ResumeService.java
-│   │   │   │   │   ├── impl/         # 服务实现
-│   │   │   │   │   │   ├── UserServiceImpl.java
-│   │   │   │   │   │   └── ResumeServiceImpl.java
-│   │   │   │   │   └── DeepSeekService.java     # AI服务
-│   │   │   │   ├── mapper/           # MyBatis映射器
-│   │   │   │   │   ├── UserMapper.java
-│   │   │   │   │   └── ResumeMapper.java
-│   │   │   │   ├── entity/           # 实体类
-│   │   │   │   │   ├── User.java
-│   │   │   │   │   └── Resume.java
-│   │   │   │   ├── dto/              # 数据传输对象
-│   │   │   │   │   ├── LoginRequest.java
-│   │   │   │   │   ├── RegisterRequest.java
-│   │   │   │   │   └── OptimizeRequest.java
-│   │   │   │   ├── util/             # 工具类
-│   │   │   │   │   ├── JwtUtil.java             # JWT工具
-│   │   │   │   │   └── FileParserUtil.java      # 文件解析工具
-│   │   │   │   └── AiResumeApplication.java     # 启动类
-│   │   │   └── resources/
-│   │   │       ├── application.properties        # 配置文件
-│   │   │       └── mapper/            # MyBatis XML
-│   │   └── test/                      # 测试代码
-│   ├── pom.xml                        # Maven配置
-│   └── target/                        # 编译输出
+├── backend/                    # 后端项目
+│   ├── src/main/java/
+│   │   └── com/resume/airesume/
+│   │       ├── config/         # 配置类
+│   │       ├── controller/     # 控制器层
+│   │       ├── service/        # 服务层
+│   │       ├── mapper/         # MyBatis映射器
+│   │       ├── entity/         # 实体类
+│   │       ├── dto/            # 数据传输对象
+│   │       └── util/           # 工具类
+│   └── pom.xml
 │
-├── frontend/                          # 前端项目
+├── frontend/                   # 前端项目
 │   ├── src/
-│   │   ├── views/                     # 页面组件
-│   │   │   ├── Login.vue              # 登录页
-│   │   │   ├── Register.vue           # 注册页
-│   │   │   ├── Home.vue               # 首页
-│   │   │   └── Optimize.vue           # 优化页
-│   │   ├── components/                # 公共组件
-│   │   ├── router/                    # 路由配置
-│   │   │   └── index.js
-│   │   ├── stores/                    # Pinia状态管理
-│   │   ├── utils/                     # 工具函数
-│   │   │   └── request.js             # Axios封装
-│   │   ├── api/                       # API接口
-│   │   │   ├── auth.js                # 认证接口
-│   │   │   └── resume.js              # 简历接口
-│   │   ├── App.vue                    # 根组件
-│   │   └── main.js                    # 入口文件
-│   ├── package.json                   # 依赖配置
-│   └── dist/                          # 打包输出
+│   │   ├── views/              # 页面组件
+│   │   ├── components/         # 公共组件
+│   │   ├── router/             # 路由配置
+│   │   ├── stores/             # Pinia状态管理
+│   │   ├── utils/              # 工具函数
+│   │   └── api/                # API接口
+│   └── package.json
 │
-├── 学习笔记/                           # 学习笔记目录
+├── 学习笔记/                    # 学习笔记
 │   ├── JWT登录认证笔记.md
 │   ├── AI大模型API调用笔记.md
 │   ├── 文件上传与解析笔记.md
-│   ├── 接口设计说明-两个优化接口对比.md
-│   ├── 前端开发笔记.md
 │   └── 项目部署上线笔记.md
 │
-├── 项目文档/                           # 项目文档目录
-│   ├── README.md                      # 项目说明
-│   ├── 接口文档.md
-│   ├── 数据库设计文档.md
-│   └── 用户使用手册.md
-│
-└── 说明.md                             # 仓库说明
+└── 项目文档/                    # 项目文档
+    ├── README.md
+    ├── 接口文档.md
+    ├── 数据库设计文档.md
+    └── 用户使用手册.md
 
 
 
@@ -156,15 +118,12 @@ cd ai-resume-platform
 2. 配置数据库
 
 
-创建数据库：
-
-
 sql
 CREATE DATABASE ai_resume DEFAULT CHARACTER SET utf8mb4;
 
 
 
-执行建表SQL（见 项目文档/数据库设计文档.md）。
+建表SQL见 项目文档/数据库设计文档.md
 
 
 3. 配置后端
@@ -179,7 +138,7 @@ spring.datasource.url=jdbc:mysql://localhost:3306/ai_resume
 spring.datasource.username=root
 spring.datasource.password=你的密码
 
-# DeepSeek API（需要自己申请）
+# DeepSeek API
 deepseek.api.key=你的API Key
 
 
@@ -194,7 +153,7 @@ java -jar target/ai-resume-0.0.1-SNAPSHOT.jar
 
 
 
-后端启动后访问：http://localhost:8080
+后端地址：http://localhost:8080
 
 
 5. 启动前端
@@ -207,10 +166,10 @@ npm run dev
 
 
 
-前端启动后访问：http://localhost:5173
+前端地址：http://localhost:5173
 
 
-核心功能说明
+核心功能
 1. 用户认证
 
 
@@ -230,7 +189,6 @@ Token有效期24小时
 PDF解析：使用Apache PDFBox提取文本内容
 Word解析：使用Apache POI提取文本内容
 文件大小限制：10MB
-解析后的文本存储到数据库
 3. AI简历优化
 
 
@@ -240,7 +198,6 @@ Word解析：使用Apache POI提取文本内容
 用户输入原文和目标岗位
 AI根据岗位要求优化简历内容
 添加量化数据和技术亮点
-输出优化后的简历文本
 4. 两种优化模式
 
 
@@ -254,15 +211,12 @@ AI根据岗位要求优化简历内容
 
 全栈开发：独立完成前后端开发，掌握完整开发流程
 AI应用：接入大模型API，实现智能化功能
-文件处理：实现PDF/Word文件解析，处理非结构化数据
+文件处理：实现PDF/Word文件解析
 安全认证：使用JWT实现无状态认证，密码BCrypt加密
 生产部署：完整部署到云服务器，真实线上环境
 
 
 学习收获
-
-
-通过本项目，学习并实践了：
 
 
 Spring Boot 3.x 新特性
@@ -279,11 +233,11 @@ Nginx反向代理配置
 后续规划
 
 
- 简历模板功能（多种模板选择）
- 简历导出PDF功能
- 简历评分功能
- 多语言支持
- 移动端适配优化
+简历模板功能（多种模板选择）
+简历导出PDF功能
+简历评分功能
+多语言支持
+移动端适配优化
 
 
 作者
@@ -291,7 +245,7 @@ Nginx反向代理配置
 
 开发者：赖俊煌
 开发时间：2026年4月
-项目类型：大三下学期课程设计/实习作品
+项目类型：大三下学期实习作品
 
 
 许可证
