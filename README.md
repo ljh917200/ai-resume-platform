@@ -57,42 +57,36 @@ Nginx	Web服务器、反向代理
 项目结构
 
 
-plaintext
-ai-resume-platform/
-├── backend/                    # 后端项目
-│   ├── src/main/java/
-│   │   └── com/resume/airesume/
-│   │       ├── config/         # 配置类
-│   │       ├── controller/     # 控制器层
-│   │       ├── service/        # 服务层
-│   │       ├── mapper/         # MyBatis映射器
-│   │       ├── entity/         # 实体类
-│   │       ├── dto/            # 数据传输对象
-│   │       └── util/           # 工具类
-│   └── pom.xml
-│
-├── frontend/                   # 前端项目
-│   ├── src/
-│   │   ├── views/              # 页面组件
-│   │   ├── components/         # 公共组件
-│   │   ├── router/             # 路由配置
-│   │   ├── stores/             # Pinia状态管理
-│   │   ├── utils/              # 工具函数
-│   │   └── api/                # API接口
-│   └── package.json
-│
-├── 学习笔记/                    # 学习笔记
-│   ├── JWT登录认证笔记.md
-│   ├── AI大模型API调用笔记.md
-│   ├── 文件上传与解析笔记.md
-│   └── 项目部署上线笔记.md
-│
-└── 项目文档/                    # 项目文档
-    ├── README.md
-    ├── 接口文档.md
-    ├── 数据库设计文档.md
-    └── 用户使用手册.md
+后端目录
 
+
+backend/src/main/java/com/resume/airesume/
+config/ - 配置类
+controller/ - 控制器层
+service/ - 服务层
+mapper/ - MyBatis映射器
+entity/ - 实体类
+dto/ - 数据传输对象
+util/ - 工具类
+
+
+前端目录
+
+
+frontend/src/
+views/ - 页面组件
+components/ - 公共组件
+router/ - 路由配置
+stores/ - Pinia状态管理
+utils/ - 工具函数
+api/ - API接口
+
+
+文档目录
+
+
+学习笔记/ - 开发学习笔记
+项目文档/ - 项目文档（接口文档、数据库设计等）
 
 
 快速开始
