@@ -1,8 +1,9 @@
 import axios from 'axios'
 
 // 创建 axios 实例
+// VITE_API_BASE_URL 是环境变量，会根据开发/生产环境自动切换
 const request = axios.create({
-    baseURL: 'http://localhost:8080/api',  // 后端地址
+    baseURL: import.meta.env.VITE_API_BASE_URL,
     timeout: 30000
 })
 
