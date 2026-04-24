@@ -24,69 +24,31 @@ AI智能优化简历内容
 后端
 
 
-技术	版本	说明
-Spring Boot	3.4.1	核心框架
-MyBatis	3.0.x	ORM框架
-MySQL	8.0	数据库
-JWT	0.12.x	身份认证
-DeepSeek API	-	AI大模型接口
-Apache POI	5.x	Word文件解析
-Apache PDFBox	3.x	PDF文件解析
+<img width="548" height="584" alt="image" src="https://github.com/user-attachments/assets/61d7c122-d692-49be-8129-509c1d1f1286" />
+
 
 
 前端
 
 
-技术	版本	说明
-Vue 3	3.x	前端框架
-Vite	8.x	构建工具
-Element Plus	2.x	UI组件库
-Axios	1.x	HTTP请求库
-Vue Router	4.x	路由管理
-Pinia	2.x	状态管理
+<img width="480" height="521" alt="image" src="https://github.com/user-attachments/assets/d14bd8bd-ade6-4495-b9e8-71ddb05b1096" />
+
 
 
 部署
 
 
-技术	说明
-Nginx	Web服务器、反向代理
-阿里云轻量服务器	服务器托管
+<img width="550" height="222" alt="image" src="https://github.com/user-attachments/assets/5183087e-c505-4ded-9b41-5201ac7c691c" />
+
 
 
 项目结构
 
-
-后端目录
-
-
-backend/src/main/java/com/resume/airesume/
-config/ - 配置类
-controller/ - 控制器层
-service/ - 服务层
-mapper/ - MyBatis映射器
-entity/ - 实体类
-dto/ - 数据传输对象
-util/ - 工具类
+<img width="530" height="1177" alt="image" src="https://github.com/user-attachments/assets/56518b0b-eb52-4ef8-85a9-b5ce534c5575" />
 
 
-前端目录
 
 
-frontend/src/
-views/ - 页面组件
-components/ - 公共组件
-router/ - 路由配置
-stores/ - Pinia状态管理
-utils/ - 工具函数
-api/ - API接口
-
-
-文档目录
-
-
-学习笔记/ - 开发学习笔记
-项目文档/ - 项目文档（接口文档、数据库设计等）
 
 
 快速开始
