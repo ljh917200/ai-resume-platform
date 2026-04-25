@@ -34,6 +34,12 @@ const router = createRouter({
       name: 'Profile',
       component: () => import('../views/Profile.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/resume/:id',           // 新增：简历详情页路由
+      name: 'ResumeDetail',
+      component: () => import('../views/Detail.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

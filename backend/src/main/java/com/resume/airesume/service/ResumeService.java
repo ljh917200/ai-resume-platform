@@ -20,5 +20,5 @@ public interface ResumeService {
     boolean delete(Long id, Long userId);
 
     // 更新优化内容
-    void updateOptimizedText(Long resumeId, String optimizedText);
+    void updateOptimizedText(Long resumeId, String optimizedText,String optimizedStructuredData);
 }

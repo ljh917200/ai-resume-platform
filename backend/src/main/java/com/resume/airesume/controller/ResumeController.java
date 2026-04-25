@@ -29,6 +29,9 @@ public class ResumeController {
     @Autowired
     private DeepSeekService deepSeekService;
 
+    @Autowired
+    private PdfExportUtil pdfExportUtil;
+
     /**
      * 上传简历
      *
@@ -198,22 +201,31 @@ public class ResumeController {
             return Result.error("简历内容为空，无法优化");
         }
 
-        // 4. 调用 AI 优化
+        // 4. 调用 AI 优化纯文本
         String optimizedText = deepSeekService.optimizeResume(resume.getOriginalText(), targetRole);
 
-        // 5. 保存优化内容到数据库
-        resumeService.updateOptimizedText(id, optimizedText);
+        // 5. ★ 对优化后的文本重新做结构化提取（关键补充）
+        String optimizedStructuredData = null;
+        try {
+            optimizedStructuredData = deepSeekService.structureResume(optimizedText);
+        } catch (Exception e) {
+            System.err.println("优化版结构化失败：" + e.getMessage());
+        }
 
-        // 6. 构建返回结果
+        // 6. 保存优化内容到数据库
+        resumeService.updateOptimizedText(id, optimizedText,optimizedStructuredData);
+
+        // 7. 构建返回结果
         Map<String, Object> data = new HashMap<>();
         data.put("resumeId", id);
         data.put("fileName", resume.getFileName());
         data.put("originalText", resume.getOriginalText());
         data.put("optimizedText", optimizedText);
+        data.put("optimizedStructuredData", optimizedStructuredData);
+
         if (targetRole != null) {
             data.put("targetRole", targetRole);
         }
-
         return Result.success("优化成功", data);
     }
 
@@ -251,11 +263,14 @@ public class ResumeController {
             // 3. 根据类型选择内容
             String content;
             String title;
+            String structuredDataForExport;  // ★ 新增：根据类型选不同的结构化数据
             if ("original".equals(type)) {
                 content = resume.getOriginalText();
+                structuredDataForExport = resume.getStructuredData();           // 原始结构化
                 title = "简历（原始版本）";
             } else {
                 content = resume.getOptimizedText();
+                structuredDataForExport = resume.getOptimizedStructuredData();  // 优化版结构化
                 if (content == null || content.isEmpty()) {
                     response.setContentType("application/json;charset=UTF-8");
                     response.getWriter().write("{\"code\":400,\"message\":\"该简历尚未优化\"}");
@@ -265,7 +280,7 @@ public class ResumeController {
             }
 
             // 4. 生成PDF
-            byte[] pdfBytes = PdfExportUtil.generateResumePdf(content, title);
+            byte[] pdfBytes = pdfExportUtil.generatePdfFromStructuredData(structuredDataForExport, content);
 
             // 5. 生成文件名
             String date = java.time.LocalDate.now().toString().replace("-", "");
@@ -273,13 +288,19 @@ public class ResumeController {
 
             // 6. 设置响应头
             response.setContentType("application/pdf");
+            response.setCharacterEncoding("UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=" +
-                    java.net.URLEncoder.encode(fileName, "UTF-8"));
+                    new String(fileName.getBytes("UTF-8"), "ISO-8859-1"));
             response.setContentLength(pdfBytes.length);
 
             // 7. 写入响应流
-            response.getOutputStream().write(pdfBytes);
-            response.getOutputStream().flush();
+            try (java.io.OutputStream outputStream = response.getOutputStream()) {
+                outputStream.write(pdfBytes);
+                outputStream.flush();
+            }
+
+            System.out.println(">>> structuredData=" + resume.getStructuredData());
+            System.out.println(">>> optimizedStructuredData=" + resume.getOptimizedStructuredData());
 
         } catch (Exception e) {
             e.printStackTrace();

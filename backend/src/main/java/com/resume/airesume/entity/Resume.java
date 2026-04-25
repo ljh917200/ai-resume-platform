@@ -14,4 +14,5 @@ public class Resume {
     private LocalDateTime createdAt; // 创建时间
     private String optimizedText;       // 优化后的内容
     private LocalDateTime lastOptimizedAt; // 最后优化时间
+    private String optimizedStructuredData; //优化后的结构化数据(JSON格式)
 }

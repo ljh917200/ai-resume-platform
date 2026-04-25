@@ -2,6 +2,7 @@ package com.resume.airesume.service.impl;
 
 import com.resume.airesume.entity.Resume;
 import com.resume.airesume.mapper.ResumeMapper;
+import com.resume.airesume.service.DeepSeekService;
 import com.resume.airesume.service.FileParseService;
 import com.resume.airesume.service.ResumeService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,20 +22,39 @@ public class ResumeServiceImpl implements ResumeService {
     @Autowired
     private FileParseService fileParseService;  // 注入文件解析服务
 
+    @Autowired
+    private DeepSeekService deepSeekService;
+
     @Override
     public Resume upload(Long userId, MultipartFile file) {
         try {
-            // 解析文件，提取文字
+            // ============================================
+            // 第一步：解析文件，提取文字
+            // ============================================
             String originalText = fileParseService.parseFile(file);
 
             // 获取文件名和格式
             String fileName = file.getOriginalFilename();
             String fileFormat = fileName.substring(fileName.lastIndexOf(".") + 1).toUpperCase();
 
-            // 创建简历对象
+            // ============================================
+            // 第二步：调用AI进行结构化提取（新增）
+            // ============================================
+            String structuredData = null;
+            try {
+                structuredData = deepSeekService.structureResume(originalText);
+            } catch (Exception e) {
+                // 结构化失败不影响主流程，记录日志即可
+                System.err.println("简历结构化失败，将使用空值：" + e.getMessage());
+            }
+
+            // ============================================
+            // 第三步：创建简历对象并保存
+            // ============================================
             Resume resume = new Resume();
             resume.setUserId(userId);
-            resume.setOriginalText(originalText);  // 存储解析后的文字
+            resume.setOriginalText(originalText);
+            resume.setStructuredData(structuredData);  // 存储结构化数据
             resume.setFileName(fileName);
             resume.setFileFormat(fileFormat);
             resume.setCreatedAt(LocalDateTime.now());
@@ -82,10 +102,11 @@ public class ResumeServiceImpl implements ResumeService {
 
 
     // 更新优化内容
-    public void updateOptimizedText(Long resumeId, String optimizedText) {
+    public void updateOptimizedText(Long resumeId, String optimizedText,String optimizedStructuredData) {
         Resume resume = new Resume();
         resume.setId(resumeId);
         resume.setOptimizedText(optimizedText);
+        resume.setOptimizedStructuredData(optimizedStructuredData);  // 新增
         resume.setLastOptimizedAt(LocalDateTime.now());
         resumeMapper.updateOptimizedText(resume);
     }

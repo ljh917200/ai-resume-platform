@@ -115,7 +115,8 @@
             </div>
             <div class="resume-footer">
               <div class="upload-time">{{ resume.createdAt }}</div>
-              <div class="resume-actions">
+              <div class="resume-actions" >
+                <el-button type="primary" size="small" plain @click="goDetail(resume.id)">详情</el-button>
                 <el-button type="primary" size="small" @click="goOptimize(resume.id)">优化</el-button>
                 <el-button type="danger" size="small" @click="handleDelete(resume.id)">删除</el-button>
               </div>
@@ -306,11 +307,17 @@ const logout = () => {
   router.push('/login')
 }
 
-// 滚动到上传区域
+// 跳转简历详情页
+const goDetail = (id) => {
+  router.push(`/resume/${id}`)
+}
+
+// 滚动到上传区域并触发文件选择
 const scrollToUpload = () => {
-  const uploadSection = document.querySelector('.action-card.primary')
-  if (uploadSection) {
-    uploadSection.scrollIntoView({ behavior: 'smooth' })
+  // 触发 el-upload 的文件选择
+  const uploadInput = document.querySelector('.upload-area input[type="file"]')
+  if (uploadInput) {
+    uploadInput.click()
   }
 }
 

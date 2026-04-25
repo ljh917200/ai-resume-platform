@@ -1,116 +1,503 @@
 package com.resume.airesume.util;
 
-import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.kernel.colors.Color;
+import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
 import com.itextpdf.layout.Document;
-import com.itextpdf.layout.element.Paragraph;
-import com.itextpdf.layout.element.Text;
+import com.itextpdf.layout.element.*;
 import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * PDF导出工具类
- * 功能：将简历内容导出为PDF格式
- * 依赖：iText 7
+ * 支持动态排版，根据结构化数据自动生成简历PDF
+ * 使用iText 7版本
+ *
+ * @author AI Resume Platform
+ * @version 1.3.0
  */
+@Component
 public class PdfExportUtil {
 
-    // 中文字体路径（使用iText内置的亚洲字体）
-    private static final String CHINESE_FONT = "STSong-Light";
+    private static final Color PRIMARY_COLOR = new DeviceRgb(64, 158, 255);
 
-    /**
-     * 生成简历PDF
-     *
-     * @param content 简历内容
-     * @param title 简历标题
-     * @return PDF字节数组
-     * @throws Exception 生成失败时抛出异常
-     */
-    public static byte[] generateResumePdf(String content, String title) throws Exception {
-        // 创建输出流
+    private static final Color GRAY_COLOR = new DeviceRgb(128, 128, 128);
+
+    public byte[] generatePdfFromStructuredData(String structuredData, String originalText) throws Exception {
+
+
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-        // 创建PDF写入器
         PdfWriter writer = new PdfWriter(outputStream);
-
-        // 创建PDF文档
         PdfDocument pdfDoc = new PdfDocument(writer);
-
-        // 创建文档对象
         Document document = new Document(pdfDoc);
 
-        try {
-            // 创建中文字体
-            PdfFont font = PdfFontFactory.createFont(CHINESE_FONT, "UniGB-UCS2-H");
+        document.setMargins(50, 50, 50, 50);
 
-            // 设置文档默认字体
-            document.setFont(font);
+        PdfFont chineseFont = PdfFontFactory.createFont(
+                "STSong-Light", "UniGB-UCS2-H", PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED
+        );
+        document.setFont(chineseFont);
 
-            // 添加标题
-            Paragraph titleParagraph = new Paragraph(title)
-                    .setFontSize(20)
+        if (structuredData == null || structuredData.trim().isEmpty() || "null".equals(structuredData)) {
+            generateSimplePdf(document, originalText);
+        } else {
+            JSONObject json = new JSONObject(structuredData);
+            generateStructuredPdf(document, json);
+        }
+
+        document.close();
+        return outputStream.toByteArray();
+    }
+
+    private void generateStructuredPdf(Document document, JSONObject json) throws Exception {
+
+        String name = json.optString("name", null);
+        if (name != null && !name.isEmpty()) {
+            Paragraph titleParagraph = new Paragraph(name)
+                    .setFontSize(24)
                     .setBold()
+                    .setFontColor(PRIMARY_COLOR)
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginBottom(20);
+                    .setMarginBottom(5);
             document.add(titleParagraph);
+        }
 
-            // 添加分隔线
-            Paragraph separator = new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginBottom(20)
-                    .setFontSize(10);
-            document.add(separator);
+        addContactInfo(document, json);
 
-            // 处理内容：按段落分割
-            String[] paragraphs = content.split("\n");
-            for (String para : paragraphs) {
-                if (para.trim().isEmpty()) {
-                    // 空行
-                    document.add(new Paragraph(" ").setMarginBottom(5));
-                } else {
-                    // 普通段落
-                    Paragraph paragraph = new Paragraph(para.trim())
-                            .setFontSize(11)
-                            .setMarginBottom(8)
-                            .setTextAlignment(TextAlignment.JUSTIFIED);
-                    document.add(paragraph);
-                }
-            }
+        addSeparator(document);
 
-            // 添加页脚：导出时间
-            Paragraph footer = new Paragraph()
-                    .setMarginTop(30)
-                    .setFontSize(9);
-            footer.add(new Text("导出时间：" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
-                    .setItalic());
-            document.add(footer);
+        String selfEvaluation = json.optString("selfEvaluation", null);
+        if (selfEvaluation != null && !selfEvaluation.isEmpty()) {
+            addSection(document, "自我评价");
+            Paragraph evalParagraph = new Paragraph(selfEvaluation)
+                    .setFontSize(11)
+                    .setMarginBottom(15);
+            document.add(evalParagraph);
+        }
 
-            // 关闭文档
-            document.close();
+        JSONArray education = json.optJSONArray("education");
+        if (education != null && education.length() > 0) {
+            addSection(document, "教育经历");
+            addEducationItems(document, education);
+        }
 
-            return outputStream.toByteArray();
+        JSONArray experience = json.optJSONArray("experience");
+        if (experience != null && experience.length() > 0) {
+            addSection(document, "工作经历");
+            addExperienceItems(document, experience);
+        }
 
-        } catch (Exception e) {
-            document.close();
-            throw new Exception("PDF生成失败: " + e.getMessage(), e);
+        JSONArray projects = json.optJSONArray("projects");
+        if (projects != null && projects.length() > 0) {
+            addSection(document, "项目经历");
+            addProjectItems(document, projects);
+        }
+
+        JSONArray skills = json.optJSONArray("skills");
+        if (skills != null && skills.length() > 0) {
+            addSection(document, "技能特长");
+            addSkillsItems(document, skills);
+        }
+
+        JSONArray awards = json.optJSONArray("awards");
+        if (awards != null && awards.length() > 0) {
+            addSection(document, "获奖情况");
+            addAwardItems(document, awards);
+        }
+
+        JSONArray competitions = json.optJSONArray("competitions");
+        if (competitions != null && competitions.length() > 0) {
+            addSection(document, "比赛经历");
+            addCompetitionItems(document, competitions);
+        }
+
+        JSONArray certifications = json.optJSONArray("certifications");
+        if (certifications != null && certifications.length() > 0) {
+            addSection(document, "证书资质");
+            addCertificationItems(document, certifications);
+        }
+
+        JSONArray campusActivities = json.optJSONArray("campusActivities");
+        if (campusActivities != null && campusActivities.length() > 0) {
+            addSection(document, "校园活动");
+            addCampusActivityItems(document, campusActivities);
         }
     }
 
-    /**
-     * 生成文件名
-     * 格式：简历_姓名_日期.pdf
-     *
-     * @param username 用户名
-     * @return 文件名
-     */
-    public static String generateFileName(String username) {
-        String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        return String.format("简历_%s_%s.pdf", username, date);
+    private void addContactInfo(Document document, JSONObject json) throws Exception {
+        String phone = json.optString("phone", null);
+        String email = json.optString("email", null);
+        String location = json.optString("location", null);
+
+        StringBuilder contactBuilder = new StringBuilder();
+        if (phone != null && !phone.isEmpty()) {
+            contactBuilder.append(phone);
+        }
+        if (email != null && !email.isEmpty()) {
+            if (contactBuilder.length() > 0) contactBuilder.append("  |  ");
+            contactBuilder.append(email);
+        }
+        if (location != null && !location.isEmpty()) {
+            if (contactBuilder.length() > 0) contactBuilder.append("  |  ");
+            contactBuilder.append(location);
+        }
+
+        if (contactBuilder.length() > 0) {
+            Paragraph contactParagraph = new Paragraph(contactBuilder.toString())
+                    .setFontSize(10)
+                    .setFontColor(GRAY_COLOR)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(10);
+            document.add(contactParagraph);
+        }
     }
+
+    private void addSeparator(Document document) throws Exception {
+        SolidLine line = new SolidLine(1f);
+        line.setColor(PRIMARY_COLOR);
+        LineSeparator separator = new LineSeparator(line);
+        separator.setWidth(UnitValue.createPercentValue(100));
+        document.add(separator);
+        document.add(new Paragraph("\n"));
+    }
+
+    private void addSection(Document document, String title) throws Exception {
+        Paragraph sectionParagraph = new Paragraph(title)
+                .setFontSize(14)
+                .setBold()
+                .setFontColor(PRIMARY_COLOR)
+                .setMarginTop(10)
+                .setMarginBottom(8);
+        document.add(sectionParagraph);
+
+        SolidLine underline = new SolidLine(0.5f);
+        underline.setColor(PRIMARY_COLOR);
+        LineSeparator separator = new LineSeparator(underline);
+        separator.setWidth(UnitValue.createPercentValue(30));
+        document.add(separator);
+    }
+
+    private void addEducationItems(Document document, JSONArray education) throws Exception {
+        for (int i = 0; i < education.length(); i++) {
+            JSONObject edu = education.getJSONObject(i);
+            String school = edu.optString("school", "");
+            String degree = edu.optString("degree", "");
+            String major = edu.optString("major", "");
+            String period = edu.optString("period", "");
+
+            StringBuilder titleBuilder = new StringBuilder(school);
+            if (!degree.isEmpty()) {
+                titleBuilder.append("  |  ").append(degree);
+            }
+            if (!major.isEmpty()) {
+                titleBuilder.append("  |  ").append(major);
+            }
+
+            Paragraph titleParagraph = new Paragraph(titleBuilder.toString())
+                    .setFontSize(12)
+                    .setBold()
+                    .setMarginBottom(3);
+            document.add(titleParagraph);
+
+            if (!period.isEmpty()) {
+                Paragraph periodParagraph = new Paragraph(period)
+                        .setFontSize(10)
+                        .setFontColor(GRAY_COLOR)
+                        .setMarginBottom(8);
+                document.add(periodParagraph);
+            }
+        }
+    }
+
+    private void addExperienceItems(Document document, JSONArray experience) throws Exception {
+        for (int i = 0; i < experience.length(); i++) {
+            JSONObject exp = experience.getJSONObject(i);
+            String company = exp.optString("company", "");
+            String position = exp.optString("position", "");
+            String period = exp.optString("period", "");
+            String description = exp.optString("description", "");
+
+            StringBuilder titleBuilder = new StringBuilder(company);
+            if (!position.isEmpty()) {
+                titleBuilder.append("  |  ").append(position);
+            }
+
+            Paragraph titleParagraph = new Paragraph(titleBuilder.toString())
+                    .setFontSize(12)
+                    .setBold()
+                    .setMarginBottom(3);
+            document.add(titleParagraph);
+
+            if (!period.isEmpty()) {
+                Paragraph periodParagraph = new Paragraph(period)
+                        .setFontSize(10)
+                        .setFontColor(GRAY_COLOR)
+                        .setMarginBottom(5);
+                document.add(periodParagraph);
+            }
+
+            if (!description.isEmpty()) {
+                Paragraph descParagraph = new Paragraph(description)
+                        .setFontSize(11)
+                        .setMarginBottom(10);
+                document.add(descParagraph);
+            }
+        }
+    }
+
+    private void addProjectItems(Document document, JSONArray projects) throws Exception {
+        for (int i = 0; i < projects.length(); i++) {
+            JSONObject proj = projects.getJSONObject(i);
+            String name = proj.optString("name", "");
+            String role = proj.optString("role", "");
+            String period = proj.optString("period", "");
+            String description = proj.optString("description", "");
+
+            StringBuilder titleBuilder = new StringBuilder(name);
+            if (!role.isEmpty()) {
+                titleBuilder.append("  |  ").append(role);
+            }
+
+            Paragraph titleParagraph = new Paragraph(titleBuilder.toString())
+                    .setFontSize(12)
+                    .setBold()
+                    .setMarginBottom(3);
+            document.add(titleParagraph);
+
+            if (period != null && !period.isEmpty()) {
+                Paragraph periodParagraph = new Paragraph(period)
+                        .setFontSize(10)
+                        .setFontColor(GRAY_COLOR)
+                        .setMarginBottom(5);
+                document.add(periodParagraph);
+            }
+
+            if (!description.isEmpty()) {
+                Paragraph descParagraph = new Paragraph(description)
+                        .setFontSize(11)
+                        .setMarginBottom(10);
+                document.add(descParagraph);
+            }
+        }
+    }
+
+    private void addSkillsItems(Document document, JSONArray skills) throws Exception {
+        StringBuilder skillsBuilder = new StringBuilder();
+        for (int i = 0; i < skills.length(); i++) {
+            if (i > 0) skillsBuilder.append("  |  ");
+            skillsBuilder.append(skills.getString(i));
+        }
+
+        Paragraph skillsParagraph = new Paragraph(skillsBuilder.toString())
+                .setFontSize(11)
+                .setMarginBottom(15);
+        document.add(skillsParagraph);
+    }
+
+    private void addAwardItems(Document document, JSONArray awards) throws Exception {
+        for (int i = 0; i < awards.length(); i++) {
+            JSONObject award = awards.getJSONObject(i);
+            String name = award.optString("name", "");
+            String level = award.optString("level", "");
+            String year = award.optString("year", "");
+
+            StringBuilder builder = new StringBuilder("• ").append(name);
+            if (!level.isEmpty()) {
+                builder.append("  |  ").append(level);
+            }
+            if (!year.isEmpty()) {
+                builder.append("  |  ").append(year);
+            }
+
+            Paragraph awardParagraph = new Paragraph(builder.toString())
+                    .setFontSize(11)
+                    .setMarginBottom(5);
+            document.add(awardParagraph);
+        }
+        document.add(new Paragraph("\n"));
+    }
+
+    private void addCompetitionItems(Document document, JSONArray competitions) throws Exception {
+        for (int i = 0; i < competitions.length(); i++) {
+            JSONObject comp = competitions.getJSONObject(i);
+            String name = comp.optString("name", "");
+            String result = comp.optString("result", "");
+            String year = comp.optString("year", "");
+
+            StringBuilder builder = new StringBuilder("• ").append(name);
+            if (!result.isEmpty()) {
+                builder.append("  |  ").append(result);
+            }
+            if (!year.isEmpty()) {
+                builder.append("  |  ").append(year);
+            }
+
+            Paragraph compParagraph = new Paragraph(builder.toString())
+                    .setFontSize(11)
+                    .setMarginBottom(5);
+            document.add(compParagraph);
+        }
+        document.add(new Paragraph("\n"));
+    }
+
+    private void addCertificationItems(Document document, JSONArray certifications) throws Exception {
+        for (int i = 0; i < certifications.length(); i++) {
+            JSONObject cert = certifications.getJSONObject(i);
+            String name = cert.optString("name", "");
+            String year = cert.optString("year", "");
+
+            StringBuilder builder = new StringBuilder("• ").append(name);
+            if (!year.isEmpty()) {
+                builder.append("  |  ").append(year);
+            }
+
+            Paragraph certParagraph = new Paragraph(builder.toString())
+                    .setFontSize(11)
+                    .setMarginBottom(5);
+            document.add(certParagraph);
+        }
+        document.add(new Paragraph("\n"));
+    }
+
+    private void addCampusActivityItems(Document document, JSONArray activities) throws Exception {
+        for (int i = 0; i < activities.length(); i++) {
+            JSONObject activity = activities.getJSONObject(i);
+            String name = activity.optString("name", "");
+            String role = activity.optString("role", "");
+            String period = activity.optString("period", "");
+
+            StringBuilder builder = new StringBuilder("• ").append(name);
+            if (!role.isEmpty()) {
+                builder.append("  |  ").append(role);
+            }
+            if (!period.isEmpty()) {
+                builder.append("  |  ").append(period);
+            }
+
+            Paragraph activityParagraph = new Paragraph(builder.toString())
+                    .setFontSize(11)
+                    .setMarginBottom(5);
+            document.add(activityParagraph);
+        }
+        document.add(new Paragraph("\n"));
+    }
+
+    private void generateSimplePdf(Document document, String originalText) throws Exception {
+        Paragraph titleParagraph = new Paragraph("简历")
+                .setFontSize(24)
+                .setBold()
+                .setFontColor(PRIMARY_COLOR)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(20);
+        document.add(titleParagraph);
+
+        addSeparator(document);
+
+        if (originalText == null || originalText.isEmpty()) {
+            return;
+        }
+
+        String[] lines = originalText.split("\\r?\\n");
+        Paragraph currentBlock = null;
+
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].trim();
+            if (line.isEmpty()) {
+                continue;
+            }
+
+            if (line.startsWith("# ") && !line.startsWith("## ")) {
+                flushBlock(document, currentBlock);
+                currentBlock = null;
+
+                String text = line.substring(2).trim();
+                Paragraph h1 = new Paragraph(text)
+                        .setFontSize(18)
+                        .setBold()
+                        .setFontColor(PRIMARY_COLOR)
+                        .setMarginTop(15)
+                        .setMarginBottom(8)
+                        .setKeepTogether(true);
+                document.add(h1);
+                continue;
+            }
+
+            if (line.startsWith("## ")) {
+                flushBlock(document, currentBlock);
+                currentBlock = null;
+
+                String text = line.substring(3).trim();
+                text = text.replace("|", "  |  ");
+
+                Paragraph h2 = new Paragraph(text)
+                        .setFontSize(13)
+                        .setBold()
+                        .setMarginTop(10)
+                        .setMarginBottom(4)
+                        .setKeepTogether(true);
+                document.add(h2);
+                continue;
+            }
+
+            if (line.matches("^\\d{4}[\\.\\-]\\d{2}.*") || line.matches("^\\d{4}-\\d{4}.*")) {
+                flushBlock(document, currentBlock);
+                currentBlock = null;
+
+                Paragraph period = new Paragraph(line)
+                        .setFontSize(10)
+                        .setFontColor(GRAY_COLOR)
+                        .setMarginBottom(6);
+                document.add(period);
+                continue;
+            }
+
+            if (line.contains("|") && line.length() > 50 &&
+                    (line.contains("HTML") || line.contains("Vue") || line.contains("JavaScript"))) {
+                flushBlock(document, currentBlock);
+                currentBlock = null;
+
+                String[] skills = line.split("\\|");
+                for (String skill : skills) {
+                    skill = skill.trim();
+                    if (skill.isEmpty()) continue;
+
+                    Paragraph skillPara = new Paragraph("• " + skill)
+                            .setFontSize(11)
+                            .setMarginBottom(4);
+                    document.add(skillPara);
+                }
+                document.add(new Paragraph("\n"));
+                continue;
+            }
+
+            String cleanLine = line.replaceAll("\\*\\*", "");
+
+            if (currentBlock == null) {
+                currentBlock = new Paragraph(cleanLine)
+                        .setFontSize(11)
+                        .setMarginBottom(3);
+            } else {
+                currentBlock.add("\n" + cleanLine);
+            }
+        }
+
+        flushBlock(document, currentBlock);
+    }
+
+    private void flushBlock(Document document, Paragraph block) {
+        if (block != null) {
+            block.setKeepTogether(false);
+            document.add(block);
+        }
+    }
+
 }
