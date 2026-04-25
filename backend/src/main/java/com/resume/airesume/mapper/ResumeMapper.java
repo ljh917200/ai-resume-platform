@@ -29,4 +29,8 @@ public interface ResumeMapper {
     // 更新简历
     @Update("UPDATE resume SET original_text=#{originalText}, structured_data=#{structuredData} WHERE id=#{id}")
     int update(Resume resume);
+
+    // 更新优化内容
+    @Update("UPDATE resume SET optimized_text = #{optimizedText}, last_optimized_at = #{lastOptimizedAt} WHERE id = #{id}")
+    int updateOptimizedText(Resume resume);
 }

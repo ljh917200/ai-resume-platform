@@ -28,3 +28,11 @@ export function deleteResume(id) {
 export function optimizeResume(id, targetRole) {
     return request.post(`/resume/optimize/${id}?targetRole=${encodeURIComponent(targetRole || '')}`)
 }
+
+// 导出简历PDF
+export function exportResume(id, type = 'optimized') {
+    return request.get(`/resume/export/${id}`, {
+        params: { type },
+        responseType: 'blob'  // 告诉 axios 返回二进制数据
+    })
+}

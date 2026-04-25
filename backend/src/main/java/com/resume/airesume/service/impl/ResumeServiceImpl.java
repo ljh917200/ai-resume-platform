@@ -79,4 +79,14 @@ public class ResumeServiceImpl implements ResumeService {
         }
         return resumeMapper.deleteById(id) > 0;
     }
+
+
+    // 更新优化内容
+    public void updateOptimizedText(Long resumeId, String optimizedText) {
+        Resume resume = new Resume();
+        resume.setId(resumeId);
+        resume.setOptimizedText(optimizedText);
+        resume.setLastOptimizedAt(LocalDateTime.now());
+        resumeMapper.updateOptimizedText(resume);
+    }
 }

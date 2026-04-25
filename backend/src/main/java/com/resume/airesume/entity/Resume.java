@@ -12,4 +12,6 @@ public class Resume {
     private String fileName;      // 原始文件名
     private String fileFormat;    // 文件格式（PDF/DOCX）
     private LocalDateTime createdAt; // 创建时间
+    private String optimizedText;       // 优化后的内容
+    private LocalDateTime lastOptimizedAt; // 最后优化时间
 }

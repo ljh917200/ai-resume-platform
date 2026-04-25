@@ -71,11 +71,20 @@
             <el-icon><i class="el-icon-house"></i></el-icon>
             返回首页
           </el-button>
-          <el-button type="primary" @click="handleOptimize" :loading="loading" size="large">
+          <el-button @click="handleExport('original')" size="large">
+            <el-icon><i class="el-icon-download"></i></el-icon>
+            导出原始
+          </el-button>
+          <el-button type="primary" @click="handleExport('optimized')" size="large">
+            <el-icon><i class="el-icon-download"></i></el-icon>
+            导出优化版
+          </el-button>
+          <el-button @click="handleOptimize" :loading="loading" size="large">
             <el-icon v-if="!loading"><i class="el-icon-refresh"></i></el-icon>
             重新优化
           </el-button>
         </div>
+
       </div>
     </el-main>
   </div>
@@ -85,7 +94,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getResume, optimizeResume } from '../api/resume'
+import { getResume, optimizeResume, exportResume } from '../api/resume'
 
 const router = useRouter()
 const route = useRoute()
@@ -146,6 +155,51 @@ const copyOriginal = () => {
   navigator.clipboard.writeText(resume.value.originalText)
   ElMessage.success('已复制到剪贴板')
 }
+
+// 导出PDF
+const handleExport = async (type) => {
+  try {
+    // 1. 调用导出接口，返回二进制数据（blob）
+    const res = await exportResume(resume.value.id, type)
+
+    // 2. 创建一个 Blob 对象（二进制大对象），用来存储文件数据
+    // Blob 是浏览器处理二进制数据的方式
+    const blob = new Blob([res])
+
+    // 3. 为 Blob 创建一个临时的 URL 地址
+    // 例如：blob:http://localhost:5173/xxxx-xxxx-xxxx
+    const url = window.URL.createObjectURL(blob)
+
+    // 4. 创建一个隐藏的 <a> 标签
+    const link = document.createElement('a')
+
+    // 5. 设置下载链接
+    link.href = url
+
+    // 6. 设置下载的文件名
+    // 如果是 original 类型，文件名为 "简历_原始.pdf"
+    // 如果是 optimized 类型，文件名为 "简历_优化.pdf"
+    link.setAttribute('download', `简历_${type === 'original' ? '原始' : '优化'}.pdf`)
+
+    // 7. 把 <a> 标签添加到页面中（必须添加才能触发点击）
+    document.body.appendChild(link)
+
+    // 8. 触发点击事件，开始下载
+    link.click()
+
+    // 9. 下载完成后，移除这个 <a> 标签
+    document.body.removeChild(link)
+
+    // 10. 释放临时 URL，释放内存
+    window.URL.revokeObjectURL(url)
+
+    // 11. 提示用户导出成功
+    ElMessage.success('导出成功')
+  } catch (error) {
+    ElMessage.error('导出失败')
+  }
+}
+
 
 // 返回首页
 const goBack = () => {

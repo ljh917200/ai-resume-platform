@@ -4,7 +4,9 @@ import com.resume.airesume.dto.Result;
 import com.resume.airesume.entity.Resume;
 import com.resume.airesume.service.DeepSeekService;
 import com.resume.airesume.service.ResumeService;
+import com.resume.airesume.util.PdfExportUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -199,7 +201,10 @@ public class ResumeController {
         // 4. 调用 AI 优化
         String optimizedText = deepSeekService.optimizeResume(resume.getOriginalText(), targetRole);
 
-        // 5. 构建返回结果
+        // 5. 保存优化内容到数据库
+        resumeService.updateOptimizedText(id, optimizedText);
+
+        // 6. 构建返回结果
         Map<String, Object> data = new HashMap<>();
         data.put("resumeId", id);
         data.put("fileName", resume.getFileName());
@@ -212,6 +217,79 @@ public class ResumeController {
         return Result.success("优化成功", data);
     }
 
+    /**
+     * 导出简历PDF
+     *
+     * @param id      简历ID
+     * @param type    导出类型：original（原始内容）/ optimized（优化后内容）
+     * @param request HTTP请求对象
+     * @param response HTTP响应对象
+     */
+    @GetMapping("/export/{id}")
+    public void exportResume(
+            @PathVariable("id") Long id,
+            @RequestParam(value = "type", defaultValue = "optimized") String type,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        try {
+            // 1. 获取当前登录用户ID
+            Long userId = (Long) request.getAttribute("userId");
+            if (userId == null) {
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":401,\"message\":\"用户未登录\"}");
+                return;
+            }
 
+            // 2. 查询简历（同时验证归属）
+            Resume resume = resumeService.getById(id, userId);
+            if (resume == null) {
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":404,\"message\":\"简历不存在或无权访问\"}");
+                return;
+            }
+
+            // 3. 根据类型选择内容
+            String content;
+            String title;
+            if ("original".equals(type)) {
+                content = resume.getOriginalText();
+                title = "简历（原始版本）";
+            } else {
+                content = resume.getOptimizedText();
+                if (content == null || content.isEmpty()) {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"code\":400,\"message\":\"该简历尚未优化\"}");
+                    return;
+                }
+                title = "简历（优化版本）";
+            }
+
+            // 4. 生成PDF
+            byte[] pdfBytes = PdfExportUtil.generateResumePdf(content, title);
+
+            // 5. 生成文件名
+            String date = java.time.LocalDate.now().toString().replace("-", "");
+            String fileName = "简历_" + date + ".pdf";
+
+            // 6. 设置响应头
+            response.setContentType("application/pdf");
+            response.setHeader("Content-Disposition", "attachment; filename=" +
+                    java.net.URLEncoder.encode(fileName, "UTF-8"));
+            response.setContentLength(pdfBytes.length);
+
+            // 7. 写入响应流
+            response.getOutputStream().write(pdfBytes);
+            response.getOutputStream().flush();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            try {
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":500,\"message\":\"导出失败: " + e.getMessage() + "\"}");
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
 
 }
