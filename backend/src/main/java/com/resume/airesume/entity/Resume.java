@@ -15,4 +15,9 @@ public class Resume {
     private String optimizedText;       // 优化后的内容
     private LocalDateTime lastOptimizedAt; // 最后优化时间
     private String optimizedStructuredData; //优化后的结构化数据(JSON格式)
+    /**
+     * 用户自定义简历名称（可选）
+     * 为空时显示file_name
+     */
+    private String displayName;
 }

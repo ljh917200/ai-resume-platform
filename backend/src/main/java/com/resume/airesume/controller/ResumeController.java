@@ -3,6 +3,7 @@ package com.resume.airesume.controller;
 import com.resume.airesume.dto.Result;
 import com.resume.airesume.entity.Resume;
 import com.resume.airesume.service.DeepSeekService;
+import com.resume.airesume.service.OptimizeHistoryService;
 import com.resume.airesume.service.ResumeService;
 import com.resume.airesume.util.PdfExportUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -31,6 +34,10 @@ public class ResumeController {
 
     @Autowired
     private PdfExportUtil pdfExportUtil;
+
+    //注入优化历史服务
+    @Autowired
+    private OptimizeHistoryService optimizeHistoryService;
 
     /**
      * 上传简历
@@ -86,7 +93,8 @@ public class ResumeController {
             return Result.success("上传成功", data);
 
         } catch (Exception e) {
-            return Result.error("上传失败: " + e.getMessage());
+            e.printStackTrace();  // 后端记录详细日志
+            return Result.error("上传失败，请检查文件格式后重试");
         }
     }
 
@@ -167,7 +175,8 @@ public class ResumeController {
                 return Result.error("删除失败");
             }
         } catch (Exception e) {
-            return Result.error(e.getMessage());
+            e.printStackTrace();
+            return Result.error("删除失败，请稍后重试");
         }
     }
 
@@ -214,6 +223,22 @@ public class ResumeController {
 
         // 6. 保存优化内容到数据库
         resumeService.updateOptimizedText(id, optimizedText,optimizedStructuredData);
+
+        // ★ 新增：保存优化历史记录
+        try {
+            optimizeHistoryService.saveHistory(
+                    id,
+                    userId,
+                    targetRole,
+                    resume.getOriginalText(),           // 优化前原始文本
+                    optimizedText,                      // 优化后文本
+                    resume.getStructuredData(),         // 优化前结构化数据
+                    optimizedStructuredData             // 优化后结构化数据
+            );
+        } catch (Exception e) {
+            // 保存历史失败不影响主流程，记录日志即可
+            System.err.println("保存优化历史失败：" + e.getMessage());
+        }
 
         // 7. 构建返回结果
         Map<String, Object> data = new HashMap<>();
@@ -290,7 +315,7 @@ public class ResumeController {
             response.setContentType("application/pdf");
             response.setCharacterEncoding("UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=" +
-                    new String(fileName.getBytes("UTF-8"), "ISO-8859-1"));
+                    new String(fileName.getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1));
             response.setContentLength(pdfBytes.length);
 
             // 7. 写入响应流
@@ -307,9 +332,93 @@ public class ResumeController {
             try {
                 response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write("{\"code\":500,\"message\":\"导出失败: " + e.getMessage() + "\"}");
-            } catch (Exception ex) {
-                ex.printStackTrace();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
             }
+        }
+    }
+
+
+    /**
+     * 重命名简历
+     *
+     * @param id 简历ID
+     * @param requestBody 请求体，包含新名称
+     * @param request HTTP请求对象（获取当前用户ID）
+     * @return 操作结果
+     */
+    @PutMapping("/rename/{id}")
+    public Result<String> renameResume(
+            @PathVariable("id") Long id,
+            @RequestBody Map<String, String> requestBody,
+            HttpServletRequest request) {
+
+        try {
+            // 1. 获取当前登录用户ID
+            Long userId = (Long) request.getAttribute("userId");
+            if (userId == null) {
+                return Result.error("用户未登录");
+            }
+
+            // 2. 获取新名称
+            String displayName = requestBody.get("displayName");
+            if (displayName == null || displayName.trim().isEmpty()) {
+                return Result.error("简历名称不能为空");
+            }
+
+            // 3. 限制名称长度
+            if (displayName.length() > 50) {
+                return Result.error("简历名称不能超过50个字符");
+            }
+
+            // 4. 调用服务层重命名
+            boolean success = resumeService.renameResume(id, userId, displayName.trim());
+            if (success) {
+                return Result.success("重命名成功", null);
+            } else {
+                return Result.error("重命名失败");
+            }
+
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 批量删除简历
+     *
+     * @param requestBody 请求体，包含简历ID列表
+     * @param request HTTP请求对象（获取当前用户ID）
+     * @return 操作结果
+     */
+    @DeleteMapping("/batch")
+    public Result<Map<String, Object>> batchDelete(
+            @RequestBody Map<String, List<Long>> requestBody,
+            HttpServletRequest request) {
+
+        try {
+            // 1. 获取当前登录用户ID
+            Long userId = (Long) request.getAttribute("userId");
+            if (userId == null) {
+                return Result.error("用户未登录");
+            }
+
+            // 2. 获取简历ID列表
+            List<Long> ids = requestBody.get("ids");
+            if (ids == null || ids.isEmpty()) {
+                return Result.error("请选择要删除的简历");
+            }
+
+            // 3. 调用服务层批量删除
+            int deletedCount = resumeService.batchDelete(ids, userId);
+
+            // 4. 返回删除数量
+            Map<String, Object> data = new HashMap<>();
+            data.put("deletedCount", deletedCount);
+            return Result.success("成功删除 " + deletedCount + " 份简历", data);
+
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
         }
     }
 

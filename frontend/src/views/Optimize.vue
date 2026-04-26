@@ -194,9 +194,118 @@
               </el-button>
             </div>
 
-            <!-- 优化后内容 -->
-            <div v-if="optimizedText" class="optimized-content">
-              {{ optimizedText }}
+            <!-- 结构化展示优化后内容 -->
+            <div v-if="optimizedStructuredData && hasOptimizedContent" class="structured-resume optimized">
+              <!-- 基本信息 -->
+              <div class="section basic-info" v-if="optimizedStructuredData.name || optimizedStructuredData.phone || optimizedStructuredData.email">
+                <div class="avatar">{{ optimizedStructuredData.name ? optimizedStructuredData.name.charAt(0) : 'U' }}</div>
+                <div class="info">
+                  <h2 class="name">{{ optimizedStructuredData.name || '未填写姓名' }}</h2>
+                  <div class="contact">
+                    <span v-if="optimizedStructuredData.phone">{{ optimizedStructuredData.phone }}</span>
+                    <span v-if="optimizedStructuredData.email">{{ optimizedStructuredData.email }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 教育经历 -->
+              <div class="section" v-if="optimizedStructuredData.education && optimizedStructuredData.education.length > 0">
+                <h4 class="section-title">教育经历</h4>
+                <div class="section-content">
+                  <div v-for="(edu, index) in optimizedStructuredData.education" :key="index" class="item">
+                    <div class="item-header">
+                      <span class="item-title">{{ edu.school }}</span>
+                      <span class="item-period">{{ edu.period }}</span>
+                    </div>
+                    <div class="item-subtitle">{{ edu.major }} · {{ edu.degree }}</div>
+                    <div class="item-extra" v-if="edu.gpa">GPA: {{ edu.gpa }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 工作经历 -->
+              <div class="section" v-if="optimizedStructuredData.experience && optimizedStructuredData.experience.length > 0">
+                <h4 class="section-title">工作/实习经历</h4>
+                <div class="section-content">
+                  <div v-for="(exp, index) in optimizedStructuredData.experience" :key="index" class="item">
+                    <div class="item-header">
+                      <span class="item-title">{{ exp.company }}</span>
+                      <span class="item-period">{{ exp.period }}</span>
+                    </div>
+                    <div class="item-subtitle">{{ exp.position }}</div>
+                    <div class="item-desc">{{ exp.description }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 项目经历 -->
+              <div class="section" v-if="optimizedStructuredData.projects && optimizedStructuredData.projects.length > 0">
+                <h4 class="section-title">项目经历</h4>
+                <div class="section-content">
+                  <div v-for="(proj, index) in optimizedStructuredData.projects" :key="index" class="item">
+                    <div class="item-header">
+                      <span class="item-title">{{ proj.name }}</span>
+                      <span class="item-period">{{ proj.period }}</span>
+                    </div>
+                    <div class="item-subtitle">{{ proj.role }}</div>
+                    <div class="item-desc">{{ proj.description }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 技能 -->
+              <div class="section" v-if="optimizedStructuredData.skills && optimizedStructuredData.skills.length > 0">
+                <h4 class="section-title">专业技能</h4>
+                <div class="skill-tags">
+                  <el-tag v-for="skill in optimizedStructuredData.skills" :key="skill" size="small">
+                    {{ skill }}
+                  </el-tag>
+                </div>
+              </div>
+
+              <!-- 获奖经历 -->
+              <div class="section" v-if="optimizedStructuredData.awards && optimizedStructuredData.awards.length > 0">
+                <h4 class="section-title">获奖经历</h4>
+                <div class="section-content">
+                  <div v-for="(award, index) in optimizedStructuredData.awards" :key="index" class="item">
+                    <div class="item-header">
+                      <span class="item-title">{{ award.name }}</span>
+                      <span class="item-period">{{ award.year }}</span>
+                    </div>
+                    <div class="item-subtitle">{{ award.level }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 比赛经历 -->
+              <div class="section" v-if="optimizedStructuredData.competitions && optimizedStructuredData.competitions.length > 0">
+                <h4 class="section-title">比赛经历</h4>
+                <div class="section-content">
+                  <div v-for="(comp, index) in optimizedStructuredData.competitions" :key="index" class="item">
+                    <div class="item-header">
+                      <span class="item-title">{{ comp.name }}</span>
+                      <span class="item-period">{{ comp.year }}</span>
+                    </div>
+                    <div class="item-subtitle">{{ comp.result }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 证书资质 -->
+              <div class="section" v-if="optimizedStructuredData.certifications && optimizedStructuredData.certifications.length > 0">
+                <h4 class="section-title">证书资质</h4>
+                <div class="skill-tags">
+                  <el-tag v-for="cert in optimizedStructuredData.certifications" :key="cert" size="small" type="success">
+                    {{ cert }}
+                  </el-tag>
+                </div>
+              </div>
+
+              <!-- 自我评价 -->
+              <div class="section" v-if="optimizedStructuredData.selfEvaluation">
+                <h4 class="section-title">自我评价</h4>
+                <div class="item-desc">{{ optimizedStructuredData.selfEvaluation }}</div>
+              </div>
             </div>
 
             <!-- 未优化时的提示 -->
@@ -243,6 +352,7 @@ const route = useRoute()
 // ============================================
 const resume = ref(null)
 const structuredData = ref(null)
+const optimizedStructuredData = ref(null)
 const targetRole = ref('')
 const optimizedText = ref('')
 const optimizing = ref(false)
@@ -252,6 +362,21 @@ const loadingResume = ref(true)
 const hasContent = computed(() => {
   if (!structuredData.value) return false
   const data = structuredData.value
+  return data.name ||
+      data.education?.length > 0 ||
+      data.experience?.length > 0 ||
+      data.projects?.length > 0 ||
+      data.skills?.length > 0 ||
+      data.awards?.length > 0 ||
+      data.competitions?.length > 0 ||
+      data.certifications?.length > 0 ||
+      data.selfEvaluation
+})
+
+// 计算属性：优化后是否有结构化内容
+const hasOptimizedContent = computed(() => {
+  if (!optimizedStructuredData.value) return false
+  const data = optimizedStructuredData.value
   return data.name ||
       data.education?.length > 0 ||
       data.experience?.length > 0 ||
@@ -308,6 +433,18 @@ const fetchResume = async () => {
       }
     }
 
+    // 解析优化后的结构化数据
+    if (resume.value.optimizedStructuredData) {
+      try {
+        optimizedStructuredData.value = typeof resume.value.optimizedStructuredData === 'string'
+            ? JSON.parse(resume.value.optimizedStructuredData)
+            : resume.value.optimizedStructuredData
+      } catch (e) {
+        console.error('解析优化后结构化数据失败:', e)
+        optimizedStructuredData.value = null
+      }
+    }
+
     // 如果已有优化结果，显示
     if (resume.value.optimizedText) {
       optimizedText.value = resume.value.optimizedText
@@ -328,10 +465,32 @@ const handleOptimize = async () => {
   optimizing.value = true
   try {
     const res = await optimizeResume(resume.value.id, targetRole.value)
+    console.log('优化API返回数据:', res)
     if (res.code === 200) {
       optimizedText.value = res.data.optimizedText
 
-      console.log(res);
+      // 解析优化后的结构化数据
+      console.log('检查structuredData:', res.data.structuredData)
+      if (res.data.structuredData) {
+        try {
+          optimizedStructuredData.value = typeof res.data.structuredData === 'string'
+              ? JSON.parse(res.data.structuredData)
+              : res.data.structuredData
+          console.log('优化后结构化数据:', optimizedStructuredData.value)
+        } catch (e) {
+          console.error('解析优化后结构化数据失败:', e)
+          optimizedStructuredData.value = null
+        }
+      } else {
+        console.log('没有structuredData字段，尝试其他字段')
+        // 尝试其他可能的字段名
+        if (res.data.optimizedStructuredData) {
+          optimizedStructuredData.value = typeof res.data.optimizedStructuredData === 'string'
+              ? JSON.parse(res.data.optimizedStructuredData)
+              : res.data.optimizedStructuredData
+          console.log('从optimizedStructuredData获取:', optimizedStructuredData.value)
+        }
+      }
 
       ElMessage.success('优化成功')
     } else {
@@ -514,6 +673,19 @@ const goBack = () => {
   padding: 20px;
   max-height: calc(100vh - 300px);
   overflow-y: auto;
+}
+
+.structured-resume.optimized {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+}
+
+.structured-resume.optimized .section-title {
+  color: #764ba2;
+  border-bottom-color: #764ba2;
+}
+
+.structured-resume.optimized .item {
+  border-left-color: #764ba2;
 }
 
 .section {

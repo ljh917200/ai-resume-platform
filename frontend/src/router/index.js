@@ -5,7 +5,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/login'
+      redirect: '/home'
     },
     {
       path: '/login',
@@ -40,18 +40,33 @@ const router = createRouter({
       name: 'ResumeDetail',
       component: () => import('../views/Detail.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/history/:resumeId',
+      name: 'OptimizeHistory',
+      component: () => import('../views/History.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })
 
-// 路由守卫：未登录跳转登录页
+// 路由守卫
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
+
+  // 访问登录/注册页时，如果已登录则跳首页
+  if ((to.path === '/login' || to.path === '/register') && token) {
+    next('/home')
+    return
+  }
+
+  // 需要登录的页面，没token则跳登录页
   if (to.meta.requiresAuth && !token) {
     next('/login')
-  } else {
-    next()
+    return
   }
+
+  next()
 })
 
 export default router

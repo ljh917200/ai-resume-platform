@@ -95,35 +95,66 @@
 
       <!-- 我的简历列表 -->
       <div class="resume-section">
-        <h3 class="section-title">我的简历</h3>
-        <div v-if="resumeList.length === 0" class="empty-state">
+        <div class="section-header">
+          <h3 class="section-title">我的简历</h3>
+          <!-- 批量操作按钮（有选中时显示） -->
+          <div v-if="selectedIds.length > 0" class="batch-actions">
+            <span class="selected-count">已选择 {{ selectedIds.length }} 份</span>
+            <el-button type="danger" size="small" @click="handleBatchDelete">批量删除</el-button>
+            <el-button size="small" @click="clearSelection">取消选择</el-button>
+          </div>
+        </div>
+
+        <!-- 骨架屏加载状态 -->
+        <div v-if="pageLoading" class="skeleton-grid">
+          <div v-for="i in 3" :key="i" class="skeleton-card">
+            <el-skeleton :rows="4" animated />
+          </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-else-if="resumeList.length === 0" class="empty-state">
           <div class="empty-icon">📄</div>
           <p class="empty-text">暂无简历，点击上传开始吧</p>
           <el-button type="primary" @click="scrollToUpload">上传简历</el-button>
         </div>
+
         <div v-else class="resume-grid">
-          <div v-for="resume in resumeList" :key="resume.id" class="resume-card">
+          <div v-for="resume in resumeList" :key="resume.id" class="resume-card" :class="{ 'selected': selectedIds.includes(resume.id) }">
+            <!-- 多选框 -->
+            <div class="select-checkbox">
+              <el-checkbox v-model="selectedIds" :label="resume.id" @change="handleSelectChange">
+                &nbsp;
+              </el-checkbox>
+            </div>
+
             <div class="resume-header">
               <div class="file-icon" :class="{ 'pdf': resume.fileFormat === 'pdf', 'docx': resume.fileFormat === 'docx' }">
                 <el-icon v-if="resume.fileFormat === 'pdf'"><i class="el-icon-document"></i></el-icon>
                 <el-icon v-else><i class="el-icon-document"></i></el-icon>
               </div>
               <div class="resume-info">
-                <h4 class="file-name">{{ resume.fileName }}</h4>
+                <!-- 显示用户自定义名称，为空则显示文件名 -->
+                <h4 class="file-name">{{ resume.displayName || resume.fileName }}</h4>
+                <div v-if="resume.displayName" class="original-name">原文件：{{ resume.fileName }}</div>
                 <div v-if="resume.targetRole" class="target-role-tag">{{ resume.targetRole }}</div>
               </div>
             </div>
             <div class="resume-footer">
               <div class="upload-time">{{ resume.createdAt }}</div>
-              <div class="resume-actions" >
+              <div class="resume-actions">
                 <el-button type="primary" size="small" plain @click="goDetail(resume.id)">详情</el-button>
                 <el-button type="primary" size="small" @click="goOptimize(resume.id)">优化</el-button>
+                <!-- 重命名按钮 -->
+                <el-button type="warning" size="small" plain @click="openRenameDialog(resume)">重命名</el-button>
                 <el-button type="danger" size="small" @click="handleDelete(resume.id)">删除</el-button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+
     </el-main>
 
     <!-- 优化结果弹窗 -->
@@ -139,17 +170,31 @@
         <el-button type="primary" @click="resultDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <!-- 重命名弹窗 -->
+    <el-dialog v-model="renameDialogVisible" title="重命名简历" width="400px">
+      <el-input
+          v-model="newDisplayName"
+          placeholder="请输入新的简历名称"
+          maxlength="50"
+          show-word-limit
+      />
+      <template #footer>
+        <el-button @click="renameDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleRename" :loading="renaming">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { UploadFilled } from '@element-plus/icons-vue'
-import { uploadResume, getResumeList, deleteResume, optimizeResume } from '../api/resume'
-import { optimizeText } from '../api/ai'
-import { getUserStatistics } from '../api/user'
+import {ref, onMounted} from 'vue'
+import {useRouter} from 'vue-router'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {UploadFilled} from '@element-plus/icons-vue'
+import {uploadResume, getResumeList, deleteResume, optimizeResume, renameResume, batchDeleteResume} from '../api/resume'
+import {optimizeText} from '../api/ai'
+import {getUserStatistics} from '../api/user'
 
 const router = useRouter()
 const uploadRef = ref()
@@ -171,8 +216,21 @@ const resumeCount = ref(0)
 const optimizeCount = ref(0)
 const optimizeQuota = ref(10)
 
+// ========== 新增：重命名相关 ==========
+const renameDialogVisible = ref(false)
+const newDisplayName = ref('')
+const currentRenameId = ref(null)
+const renaming = ref(false)
+
+// ========== 新增：批量删除相关 ==========
+const selectedIds = ref([])  // 选中的简历ID列表
+
+// 页面加载状态
+const pageLoading = ref(true)
+
 // 获取简历列表
 const fetchResumeList = async () => {
+  pageLoading.value = true
   try {
     const res = await getResumeList()
     if (res.code === 200) {
@@ -181,8 +239,13 @@ const fetchResumeList = async () => {
     }
   } catch (error) {
     console.error(error)
+  } finally {
+    pageLoading.value = false
   }
 }
+
+
+
 
 // 获取用户统计数据
 const fetchStatistics = async () => {
@@ -190,7 +253,7 @@ const fetchStatistics = async () => {
     const res = await getUserStatistics()
     if (res.code === 200) {
       optimizeCount.value = res.data.optimizeCount
-      optimizeQuota.value = 100 - res.data.quotaUsed  // 假设总额度100
+      optimizeQuota.value = 100 - res.data.quotaUsed
     }
   } catch (error) {
     console.error(error)
@@ -280,12 +343,14 @@ const goOptimize = (id) => {
 // 删除简历
 const handleDelete = async (id) => {
   try {
-    await ElMessageBox.confirm('确定删除该简历？', '提示', { type: 'warning' })
+    await ElMessageBox.confirm('确定删除该简历？', '提示', {type: 'warning'})
     const res = await deleteResume(id)
     if (res.code === 200) {
       ElMessage.success('删除成功')
       fetchResumeList()
       fetchStatistics()
+      // 从选中列表中移除
+      selectedIds.value = selectedIds.value.filter(item => item !== id)
     } else {
       ElMessage.error(res.message)
     }
@@ -314,14 +379,94 @@ const goDetail = (id) => {
 
 // 滚动到上传区域并触发文件选择
 const scrollToUpload = () => {
-  // 触发 el-upload 的文件选择
   const uploadInput = document.querySelector('.upload-area input[type="file"]')
   if (uploadInput) {
     uploadInput.click()
   }
 }
 
+// ========== 新增：重命名功能 ==========
+/**
+ * 打开重命名弹窗
+ * @param {Object} resume - 简历对象
+ */
+const openRenameDialog = (resume) => {
+  currentRenameId.value = resume.id
+  // 如果有自定义名称则显示，否则显示原文件名
+  newDisplayName.value = resume.displayName || resume.fileName.replace(/\.[^/.]+$/, '')
+  renameDialogVisible.value = true
+}
 
+/**
+ * 执行重命名
+ */
+const handleRename = async () => {
+  if (!newDisplayName.value.trim()) {
+    ElMessage.warning('简历名称不能为空')
+    return
+  }
+
+  renaming.value = true
+  try {
+    const res = await renameResume(currentRenameId.value, newDisplayName.value.trim())
+    if (res.code === 200) {
+      ElMessage.success('重命名成功')
+      renameDialogVisible.value = false
+      await fetchResumeList()  // 刷新列表
+    } else {
+      ElMessage.error(res.message)
+    }
+  } catch (error) {
+    ElMessage.error('重命名失败')
+  } finally {
+    renaming.value = false
+  }
+}
+
+// ========== 新增：批量删除功能 ==========
+/**
+ * 选择变化处理
+ */
+const handleSelectChange = () => {
+  // checkbox自动处理了selectedIds，这里可以做一些额外操作
+}
+
+/**
+ * 清除选择
+ */
+const clearSelection = () => {
+  selectedIds.value = []
+}
+
+/**
+ * 批量删除
+ */
+const handleBatchDelete = async () => {
+  if (selectedIds.value.length === 0) {
+    ElMessage.warning('请先选择要删除的简历')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+        `确定删除选中的 ${selectedIds.value.length} 份简历？`,
+        '批量删除',
+        {type: 'warning'}
+    )
+
+    const res = await batchDeleteResume(selectedIds.value)
+    if (res.code === 200) {
+      ElMessage.success(`成功删除 ${res.data.deletedCount} 份简历`)
+      selectedIds.value = []  // 清空选择
+      await fetchResumeList()  // 刷新列表
+      await fetchStatistics()
+    } else {
+      ElMessage.error(res.message)
+    }
+  } catch (error) {
+    // 取消删除
+  }
+}
 </script>
 
 <style scoped>
@@ -363,7 +508,7 @@ const scrollToUpload = () => {
 .user-info {
   display: flex;
   align-items: center;
-  gap:10px;
+  gap: 10px;
 }
 
 .user-avatar {
@@ -451,101 +596,115 @@ const scrollToUpload = () => {
   background: #fff;
   border-radius: 16px;
   padding: 30px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .action-card:hover {
   transform: translateY(-5px);
-}
-
-.action-card.primary {
-  border-top: 4px solid #667eea;
-}
-
-.action-card.secondary {
-  border-top: 4px solid #764ba2;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 .action-icon {
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  font-size: 28px;
 }
 
-.action-card.primary .action-icon {
-  background: rgba(102, 126, 234, 0.1);
+.primary .action-icon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.secondary .action-icon {
+  background: #f0f2ff;
   color: #667eea;
 }
 
-.action-card.secondary .action-icon {
-  background: rgba(118, 75, 162, 0.1);
-  color: #764ba2;
-}
-
 .action-card h3 {
-  font-size: 20px;
-  color: #303133;
+  font-size: 18px;
+  font-weight: 600;
   margin-bottom: 8px;
+  color: #303133;
 }
 
 .action-card p {
-  font-size: 14px;
   color: #909399;
   margin-bottom: 20px;
-}
-
-.upload-area {
-  margin-bottom: 16px;
-}
-
-.quick-input {
-  margin-bottom: 12px;
-}
-
-.target-role-input {
-  margin-bottom: 16px;
 }
 
 .action-button {
   width: 100%;
+  margin-top: 15px;
 }
 
-/* 简历列表 */
+.upload-area {
+  width: 100%;
+}
+
+.quick-input {
+  margin-bottom: 15px;
+}
+
+.target-role-input {
+  margin-bottom: 15px;
+}
+
+/* 简历列表区域 */
 .resume-section {
   background: #fff;
   border-radius: 16px;
   padding: 30px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
 .section-title {
   font-size: 20px;
+  font-weight: 600;
   color: #303133;
-  margin-bottom: 20px;
 }
 
+/* 批量操作样式 */
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selected-count {
+  color: #909399;
+  font-size: 14px;
+}
+
+/* 空状态 */
 .empty-state {
   text-align: center;
-  padding: 60px 0;
+  padding: 60px 20px;
 }
 
 .empty-icon {
   font-size: 64px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .empty-text {
-  font-size: 16px;
   color: #909399;
   margin-bottom: 20px;
 }
 
+/* 简历卡片网格 */
 .resume-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -553,22 +712,34 @@ const scrollToUpload = () => {
 }
 
 .resume-card {
-  background: #f9f9f9;
+  background: #f9fafb;
   border-radius: 12px;
   padding: 20px;
+  border: 2px solid transparent;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .resume-card:hover {
-  background: #f0f0f0;
-  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.resume-card.selected {
+  border-color: #409eff;
+  background: #f0f7ff;
+}
+
+/* 多选框位置 */
+.select-checkbox {
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
 
 .resume-header {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 15px;
+  margin-bottom: 15px;
 }
 
 .file-icon {
@@ -578,41 +749,55 @@ const scrollToUpload = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  color: #fff;
+  font-size: 24px;
 }
 
 .file-icon.pdf {
-  background: #ff4d4f;
+  background: #fff1f0;
+  color: #f56c6c;
 }
 
 .file-icon.docx {
-  background: #1890ff;
+  background: #e8f4ff;
+  color: #409eff;
 }
 
 .resume-info {
   flex: 1;
+  min-width: 0;
 }
 
 .file-name {
   font-size: 16px;
+  font-weight: 600;
   color: #303133;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.original-name {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 5px;
 }
 
 .target-role-tag {
   display: inline-block;
-  padding: 2px 8px;
-  background: rgba(102, 126, 234, 0.1);
+  background: #f0f2ff;
   color: #667eea;
-  border-radius: 4px;
   font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .resume-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-top: 15px;
+  border-top: 1px solid #e4e7ed;
 }
 
 .upload-time {
@@ -622,31 +807,51 @@ const scrollToUpload = () => {
 
 .resume-actions {
   display: flex;
-  gap: 8px;
+  gap: 5px;
 }
 
-/* 优化结果弹窗 */
+/* 结果弹窗 */
 .result-container {
-  padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .result-container h4 {
-  margin-bottom: 12px;
+  margin: 15px 0 10px;
   color: #303133;
 }
 
-.original-text,
-.optimized-text {
+.result-container h4:first-child {
+  margin-top: 0;
+}
+
+.original-text {
   background: #f5f5f5;
-  padding: 16px;
+  padding: 15px;
   border-radius: 8px;
-  margin-bottom: 20px;
-  line-height: 1.6;
   white-space: pre-wrap;
+  color: #606266;
 }
 
 .optimized-text {
-  background: #e6f7ff;
-  border: 1px solid #91d5ff;
+  background: #f0f7ff;
+  padding: 15px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  color: #303133;
+}
+
+/* 骨架屏样式 */
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.skeleton-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 </style>

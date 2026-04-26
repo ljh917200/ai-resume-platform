@@ -33,4 +33,32 @@ public interface ResumeMapper {
     // 更新优化内容
     @Update("UPDATE resume SET optimized_text = #{optimizedText},optimized_structured_data=#{optimizedStructuredData}, last_optimized_at = #{lastOptimizedAt} WHERE id = #{id}")
     void updateOptimizedText(Resume resume);
+
+    /**
+     * 更新简历显示名称
+     *
+     * @param id 简历ID
+     * @param userId 用户ID（验证归属）
+     * @param displayName 新名称
+     * @return 影响行数
+     */
+    @Update("UPDATE resume SET display_name = #{displayName} WHERE id = #{id} AND user_id = #{userId}")
+    int updateDisplayName(@Param("id") Long id, @Param("userId") Long userId, @Param("displayName") String displayName);
+
+
+    /**
+     * 批量删除简历
+     *
+     * @param ids 简历ID列表
+     * @param userId 用户ID（验证归属）
+     * @return 影响行数
+     */
+    @Delete("<script>" +
+            "DELETE FROM resume WHERE id IN " +
+            "<foreach collection='ids' item='id' open='(' separator=',' close=')'>" +
+            "#{id}" +
+            "</foreach>" +
+            " AND user_id = #{userId}" +
+            "</script>")
+    int batchDelete(@Param("ids") List<Long> ids, @Param("userId") Long userId);
 }

@@ -110,4 +110,30 @@ public class ResumeServiceImpl implements ResumeService {
         resume.setLastOptimizedAt(LocalDateTime.now());
         resumeMapper.updateOptimizedText(resume);
     }
+
+
+    @Override
+    public boolean renameResume(Long id, Long userId, String displayName) {
+        // 验证简历是否存在且属于该用户
+        Resume resume = resumeMapper.findById(id);
+        if (resume == null) {
+            throw new RuntimeException("简历不存在");
+        }
+        if (!resume.getUserId().equals(userId)) {
+            throw new RuntimeException("无权修改此简历");
+        }
+
+        // 更新显示名称
+        return resumeMapper.updateDisplayName(id, userId, displayName) > 0;
+    }
+
+    @Override
+    public int batchDelete(List<Long> ids, Long userId) {
+        if (ids == null || ids.isEmpty()) {
+            throw new RuntimeException("请选择要删除的简历");
+        }
+
+        // 批量删除（SQL中会验证用户归属）
+        return resumeMapper.batchDelete(ids, userId);
+    }
 }

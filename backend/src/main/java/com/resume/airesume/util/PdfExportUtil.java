@@ -8,7 +8,10 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.*;
+import com.itextpdf.layout.properties.Leading;
+import com.itextpdf.layout.properties.Property;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import org.json.JSONArray;
@@ -28,9 +31,14 @@ import java.io.ByteArrayOutputStream;
 @Component
 public class PdfExportUtil {
 
+    // 主色调（深蓝色，用于标题）
     private static final Color PRIMARY_COLOR = new DeviceRgb(64, 158, 255);
 
-    private static final Color GRAY_COLOR = new DeviceRgb(128, 128, 128);
+    // 次要颜色（深灰色，用于日期）
+    private static final Color GRAY_COLOR = new DeviceRgb(100, 100, 100);
+
+    // 浅灰色（用于分隔线）
+    private static final Color LIGHT_GRAY = new DeviceRgb(220, 220, 220);
 
     public byte[] generatePdfFromStructuredData(String structuredData, String originalText) throws Exception {
 
@@ -40,7 +48,7 @@ public class PdfExportUtil {
         PdfDocument pdfDoc = new PdfDocument(writer);
         Document document = new Document(pdfDoc);
 
-        document.setMargins(50, 50, 50, 50);
+        document.setMargins(50, 45, 50, 45);
 
         PdfFont chineseFont = PdfFontFactory.createFont(
                 "STSong-Light", "UniGB-UCS2-H", PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED
@@ -60,19 +68,22 @@ public class PdfExportUtil {
 
     private void generateStructuredPdf(Document document, JSONObject json) throws Exception {
 
+        // 1. 姓名（标题，居中显示）
         String name = json.optString("name", null);
         if (name != null && !name.isEmpty()) {
             Paragraph titleParagraph = new Paragraph(name)
-                    .setFontSize(24)
+                    .setFontSize(26)
                     .setBold()
                     .setFontColor(PRIMARY_COLOR)
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginBottom(5);
+                    .setMarginBottom(8);
             document.add(titleParagraph);
         }
 
+        // 2. 联系信息
         addContactInfo(document, json);
 
+        // 3. 分隔线
         addSeparator(document);
 
         String selfEvaluation = json.optString("selfEvaluation", null);
@@ -143,17 +154,17 @@ public class PdfExportUtil {
             contactBuilder.append(phone);
         }
         if (email != null && !email.isEmpty()) {
-            if (contactBuilder.length() > 0) contactBuilder.append("  |  ");
+            if (!contactBuilder.isEmpty()) contactBuilder.append("  |  ");
             contactBuilder.append(email);
         }
         if (location != null && !location.isEmpty()) {
-            if (contactBuilder.length() > 0) contactBuilder.append("  |  ");
+            if (!contactBuilder.isEmpty()) contactBuilder.append("  |  ");
             contactBuilder.append(location);
         }
 
-        if (contactBuilder.length() > 0) {
+        if (!contactBuilder.isEmpty()) {
             Paragraph contactParagraph = new Paragraph(contactBuilder.toString())
-                    .setFontSize(10)
+                    .setFontSize(9)
                     .setFontColor(GRAY_COLOR)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginBottom(10);
@@ -162,8 +173,8 @@ public class PdfExportUtil {
     }
 
     private void addSeparator(Document document) throws Exception {
-        SolidLine line = new SolidLine(1f);
-        line.setColor(PRIMARY_COLOR);
+        SolidLine line = new SolidLine(0.3f);
+        line.setColor(LIGHT_GRAY);
         LineSeparator separator = new LineSeparator(line);
         separator.setWidth(UnitValue.createPercentValue(100));
         document.add(separator);
@@ -172,17 +183,18 @@ public class PdfExportUtil {
 
     private void addSection(Document document, String title) throws Exception {
         Paragraph sectionParagraph = new Paragraph(title)
-                .setFontSize(14)
+                .setFontSize(15)
                 .setBold()
                 .setFontColor(PRIMARY_COLOR)
-                .setMarginTop(10)
-                .setMarginBottom(8);
+                .setMarginTop(12)
+                .setMarginBottom(4);
         document.add(sectionParagraph);
 
-        SolidLine underline = new SolidLine(0.5f);
-        underline.setColor(PRIMARY_COLOR);
+        // 全宽极细浅灰色下划线
+        SolidLine underline = new SolidLine(0.3f);
+        underline.setColor(LIGHT_GRAY);
         LineSeparator separator = new LineSeparator(underline);
-        separator.setWidth(UnitValue.createPercentValue(30));
+        separator.setWidth(UnitValue.createPercentValue(100));
         document.add(separator);
     }
 
@@ -194,27 +206,39 @@ public class PdfExportUtil {
             String major = edu.optString("major", "");
             String period = edu.optString("period", "");
 
-            StringBuilder titleBuilder = new StringBuilder(school);
+            // 创建双栏表格（学校+学位在左，时间在右）
+            Table table = new Table(UnitValue.createPercentArray(new float[]{75, 25}))
+                    .setWidth(UnitValue.createPercentValue(100))
+                    .setMarginBottom(8);
+
+            // 左侧：学校 | 学位 | 专业
+            StringBuilder leftText = new StringBuilder(school);
             if (!degree.isEmpty()) {
-                titleBuilder.append("  |  ").append(degree);
+                leftText.append("  |  ").append(degree);
             }
             if (!major.isEmpty()) {
-                titleBuilder.append("  |  ").append(major);
+                leftText.append("  |  ").append(major);
             }
 
-            Paragraph titleParagraph = new Paragraph(titleBuilder.toString())
-                    .setFontSize(12)
-                    .setBold()
-                    .setMarginBottom(3);
-            document.add(titleParagraph);
+            Cell leftCell = new Cell()
+                    .add(new Paragraph(leftText.toString())
+                            .setFontSize(12)
+                            .setBold())
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(0);
 
-            if (!period.isEmpty()) {
-                Paragraph periodParagraph = new Paragraph(period)
-                        .setFontSize(10)
-                        .setFontColor(GRAY_COLOR)
-                        .setMarginBottom(8);
-                document.add(periodParagraph);
-            }
+            // 右侧：时间段（右对齐）
+            Cell rightCell = new Cell()
+                    .add(new Paragraph(period)
+                            .setFontSize(10)
+                            .setFontColor(GRAY_COLOR)
+                            .setTextAlignment(TextAlignment.RIGHT))
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(0);
+
+            table.addCell(leftCell);
+            table.addCell(rightCell);
+            document.add(table);
         }
     }
 
@@ -226,29 +250,42 @@ public class PdfExportUtil {
             String period = exp.optString("period", "");
             String description = exp.optString("description", "");
 
-            StringBuilder titleBuilder = new StringBuilder(company);
+            // 双栏表格
+            Table table = new Table(UnitValue.createPercentArray(new float[]{75, 25}))
+                    .setWidth(UnitValue.createPercentValue(100))
+                    .setMarginBottom(5);
+
+            StringBuilder leftText = new StringBuilder(company);
             if (!position.isEmpty()) {
-                titleBuilder.append("  |  ").append(position);
+                leftText.append("  |  ").append(position);
             }
 
-            Paragraph titleParagraph = new Paragraph(titleBuilder.toString())
-                    .setFontSize(12)
-                    .setBold()
-                    .setMarginBottom(3);
-            document.add(titleParagraph);
+            Cell leftCell = new Cell()
+                    .add(new Paragraph(leftText.toString())
+                            .setFontSize(12)
+                            .setBold())
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(0);
 
-            if (!period.isEmpty()) {
-                Paragraph periodParagraph = new Paragraph(period)
-                        .setFontSize(10)
-                        .setFontColor(GRAY_COLOR)
-                        .setMarginBottom(5);
-                document.add(periodParagraph);
-            }
+            Cell rightCell = new Cell()
+                    .add(new Paragraph(period)
+                            .setFontSize(10)
+                            .setFontColor(GRAY_COLOR)
+                            .setTextAlignment(TextAlignment.RIGHT))
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(0);
 
+            table.addCell(leftCell);
+            table.addCell(rightCell);
+            document.add(table);
+
+            // 描述文本（设置行距1.4倍，段底间距8）
             if (!description.isEmpty()) {
                 Paragraph descParagraph = new Paragraph(description)
                         .setFontSize(11)
-                        .setMarginBottom(10);
+                        .setMarginBottom(8)
+                        .setMarginLeft(15);  // 左缩进15
+                descParagraph.setProperty(Property.LEADING, new Leading(Leading.MULTIPLIED, 1.4f));
                 document.add(descParagraph);
             }
         }
@@ -262,29 +299,43 @@ public class PdfExportUtil {
             String period = proj.optString("period", "");
             String description = proj.optString("description", "");
 
-            StringBuilder titleBuilder = new StringBuilder(name);
+            // 双栏表格
+            Table table = new Table(UnitValue.createPercentArray(new float[]{75, 25}))
+                    .setWidth(UnitValue.createPercentValue(100))
+                    .setMarginBottom(5);
+
+            StringBuilder leftText = new StringBuilder(name);
             if (!role.isEmpty()) {
-                titleBuilder.append("  |  ").append(role);
+                leftText.append("  |  ").append(role);
             }
 
-            Paragraph titleParagraph = new Paragraph(titleBuilder.toString())
-                    .setFontSize(12)
-                    .setBold()
-                    .setMarginBottom(3);
-            document.add(titleParagraph);
+            Cell leftCell = new Cell()
+                    .add(new Paragraph(leftText.toString())
+                            .setFontSize(12)
+                            .setBold())
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(0);
 
+            Cell rightCell = new Cell();
             if (period != null && !period.isEmpty()) {
-                Paragraph periodParagraph = new Paragraph(period)
+                rightCell.add(new Paragraph(period)
                         .setFontSize(10)
                         .setFontColor(GRAY_COLOR)
-                        .setMarginBottom(5);
-                document.add(periodParagraph);
+                        .setTextAlignment(TextAlignment.RIGHT));
             }
+            rightCell.setBorder(Border.NO_BORDER).setPadding(0);
 
+            table.addCell(leftCell);
+            table.addCell(rightCell);
+            document.add(table);
+
+            // 描述文本
             if (!description.isEmpty()) {
                 Paragraph descParagraph = new Paragraph(description)
                         .setFontSize(11)
-                        .setMarginBottom(10);
+                        .setMarginBottom(8)
+                        .setMarginLeft(15);
+                descParagraph.setProperty(Property.LEADING, new Leading(Leading.MULTIPLIED, 1.4f));
                 document.add(descParagraph);
             }
         }
@@ -310,18 +361,33 @@ public class PdfExportUtil {
             String level = award.optString("level", "");
             String year = award.optString("year", "");
 
-            StringBuilder builder = new StringBuilder("• ").append(name);
+            // 使用Table实现左对齐名称，右对齐年份
+            Table table = new Table(UnitValue.createPercentArray(new float[]{70, 30}))
+                    .setWidth(UnitValue.createPercentValue(100))
+                    .setMarginBottom(5);
+
+            StringBuilder leftText = new StringBuilder("• ").append(name);
             if (!level.isEmpty()) {
-                builder.append("  |  ").append(level);
-            }
-            if (!year.isEmpty()) {
-                builder.append("  |  ").append(year);
+                leftText.append("  |  ").append(level);
             }
 
-            Paragraph awardParagraph = new Paragraph(builder.toString())
-                    .setFontSize(11)
-                    .setMarginBottom(5);
-            document.add(awardParagraph);
+            Cell leftCell = new Cell()
+                    .add(new Paragraph(leftText.toString()).setFontSize(11))
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(0);
+
+            Cell rightCell = new Cell();
+            if (!year.isEmpty()) {
+                rightCell.add(new Paragraph(year)
+                        .setFontSize(10)
+                        .setFontColor(GRAY_COLOR)
+                        .setTextAlignment(TextAlignment.RIGHT));
+            }
+            rightCell.setBorder(Border.NO_BORDER).setPadding(0);
+
+            table.addCell(leftCell);
+            table.addCell(rightCell);
+            document.add(table);
         }
         document.add(new Paragraph("\n"));
     }
@@ -333,18 +399,32 @@ public class PdfExportUtil {
             String result = comp.optString("result", "");
             String year = comp.optString("year", "");
 
-            StringBuilder builder = new StringBuilder("• ").append(name);
+            Table table = new Table(UnitValue.createPercentArray(new float[]{70, 30}))
+                    .setWidth(UnitValue.createPercentValue(100))
+                    .setMarginBottom(5);
+
+            StringBuilder leftText = new StringBuilder("• ").append(name);
             if (!result.isEmpty()) {
-                builder.append("  |  ").append(result);
-            }
-            if (!year.isEmpty()) {
-                builder.append("  |  ").append(year);
+                leftText.append("  |  ").append(result);
             }
 
-            Paragraph compParagraph = new Paragraph(builder.toString())
-                    .setFontSize(11)
-                    .setMarginBottom(5);
-            document.add(compParagraph);
+            Cell leftCell = new Cell()
+                    .add(new Paragraph(leftText.toString()).setFontSize(11))
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(0);
+
+            Cell rightCell = new Cell();
+            if (!year.isEmpty()) {
+                rightCell.add(new Paragraph(year)
+                        .setFontSize(10)
+                        .setFontColor(GRAY_COLOR)
+                        .setTextAlignment(TextAlignment.RIGHT));
+            }
+            rightCell.setBorder(Border.NO_BORDER).setPadding(0);
+
+            table.addCell(leftCell);
+            table.addCell(rightCell);
+            document.add(table);
         }
         document.add(new Paragraph("\n"));
     }
@@ -355,15 +435,27 @@ public class PdfExportUtil {
             String name = cert.optString("name", "");
             String year = cert.optString("year", "");
 
-            StringBuilder builder = new StringBuilder("• ").append(name);
-            if (!year.isEmpty()) {
-                builder.append("  |  ").append(year);
-            }
-
-            Paragraph certParagraph = new Paragraph(builder.toString())
-                    .setFontSize(11)
+            Table table = new Table(UnitValue.createPercentArray(new float[]{70, 30}))
+                    .setWidth(UnitValue.createPercentValue(100))
                     .setMarginBottom(5);
-            document.add(certParagraph);
+
+            Cell leftCell = new Cell()
+                    .add(new Paragraph("• " + name).setFontSize(11))
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(0);
+
+            Cell rightCell = new Cell();
+            if (!year.isEmpty()) {
+                rightCell.add(new Paragraph(year)
+                        .setFontSize(10)
+                        .setFontColor(GRAY_COLOR)
+                        .setTextAlignment(TextAlignment.RIGHT));
+            }
+            rightCell.setBorder(Border.NO_BORDER).setPadding(0);
+
+            table.addCell(leftCell);
+            table.addCell(rightCell);
+            document.add(table);
         }
         document.add(new Paragraph("\n"));
     }
@@ -375,18 +467,32 @@ public class PdfExportUtil {
             String role = activity.optString("role", "");
             String period = activity.optString("period", "");
 
-            StringBuilder builder = new StringBuilder("• ").append(name);
+            Table table = new Table(UnitValue.createPercentArray(new float[]{70, 30}))
+                    .setWidth(UnitValue.createPercentValue(100))
+                    .setMarginBottom(5);
+
+            StringBuilder leftText = new StringBuilder("• ").append(name);
             if (!role.isEmpty()) {
-                builder.append("  |  ").append(role);
-            }
-            if (!period.isEmpty()) {
-                builder.append("  |  ").append(period);
+                leftText.append("  |  ").append(role);
             }
 
-            Paragraph activityParagraph = new Paragraph(builder.toString())
-                    .setFontSize(11)
-                    .setMarginBottom(5);
-            document.add(activityParagraph);
+            Cell leftCell = new Cell()
+                    .add(new Paragraph(leftText.toString()).setFontSize(11))
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(0);
+
+            Cell rightCell = new Cell();
+            if (!period.isEmpty()) {
+                rightCell.add(new Paragraph(period)
+                        .setFontSize(10)
+                        .setFontColor(GRAY_COLOR)
+                        .setTextAlignment(TextAlignment.RIGHT));
+            }
+            rightCell.setBorder(Border.NO_BORDER).setPadding(0);
+
+            table.addCell(leftCell);
+            table.addCell(rightCell);
+            document.add(table);
         }
         document.add(new Paragraph("\n"));
     }

@@ -36,3 +36,28 @@ export function exportResume(id, type = 'optimized') {
         responseType: 'blob'  // 告诉 axios 返回二进制数据
     })
 }
+
+// ========== 新增功能 ==========
+
+/**
+ * 重命名简历
+ * @param {number} id - 简历ID
+ * @param {string} displayName - 新的显示名称
+ * @returns {Promise}
+ */
+export function renameResume(id, displayName) {
+    return request.put(`/resume/rename/${id}`, {
+        displayName: displayName
+    })
+}
+
+/**
+ * 批量删除简历
+ * @param {Array<number>} ids - 简历ID列表
+ * @returns {Promise}
+ */
+export function batchDeleteResume(ids) {
+    return request.delete('/resume/batch', {
+        data: {ids: ids}
+    })
+}

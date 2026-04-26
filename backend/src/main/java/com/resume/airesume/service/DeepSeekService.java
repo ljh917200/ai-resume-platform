@@ -217,7 +217,6 @@ public class DeepSeekService {
                     Map<String, String> message = (Map<String, String>) firstChoice.get("message");
                     String content = message.get("content");
 
-                    System.out.println("extractJson(content)");
 
                     // 提取JSON部分（去除markdown代码块标记）
                     return extractJson(content);

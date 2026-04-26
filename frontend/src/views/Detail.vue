@@ -28,6 +28,8 @@
           </div>
           <div class="action-buttons">
             <el-button type="primary" @click="goOptimize">优化简历</el-button>
+            <!-- 新增：查看历史按钮 -->
+            <el-button type="warning" @click="goHistory">查看历史</el-button>
             <el-button type="info" @click="exportPDF('original')">导出原始PDF</el-button>
             <el-button type="success" @click="exportPDF('optimized')" :disabled="!resumeData.optimizedText">
               导出优化版PDF
@@ -263,6 +265,13 @@ const exportPDF = async (type) => {
   } catch (error) {
     ElMessage.error('导出失败：' + (error.message || '未知错误'))
   }
+}
+
+/**
+ * 跳转到优化历史页面
+ */
+const goHistory = () => {
+  router.push(`/history/${resumeData.value.id}`)
 }
 
 /**
