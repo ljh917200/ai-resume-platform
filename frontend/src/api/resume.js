@@ -1,5 +1,6 @@
 import request from '../utils/request'
 
+
 // 上传简历
 export function uploadResume(file) {
     const formData = new FormData()
@@ -30,9 +31,9 @@ export function optimizeResume(id, targetRole) {
 }
 
 // 导出简历PDF
-export function exportResume(id, type = 'optimized') {
+export function exportResume(id, type = 'optimized', templateId=1) {
     return request.get(`/resume/export/${id}`, {
-        params: { type },
+        params: { type, templateId },
         responseType: 'blob'  // 告诉 axios 返回二进制数据
     })
 }
@@ -59,5 +60,16 @@ export function renameResume(id, displayName) {
 export function batchDeleteResume(ids) {
     return request.delete('/resume/batch', {
         data: {ids: ids}
+    })
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+// 切换简历模板
+export function switchTemplate(resumeId, templateId) {
+    return request({
+        url: `/resume/${resumeId}/template`,
+        method: 'put',
+        params: { templateId }
     })
 }

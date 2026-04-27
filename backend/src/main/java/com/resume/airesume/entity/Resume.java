@@ -20,4 +20,10 @@ public class Resume {
      * 为空时显示file_name
      */
     private String displayName;
+    /**
+     * 简历模板ID
+     * 1-简约蓝 2-商务灰 3-创意橙
+     * 默认为1
+     */
+    private Integer templateId = 1;
 }

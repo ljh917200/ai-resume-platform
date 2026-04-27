@@ -40,4 +40,7 @@ public interface ResumeService {
      * @return 删除数量
      */
     int batchDelete(List<Long> ids, Long userId);
+
+    boolean switchTemplate(Long id, Long userId, Integer templateId);
+
 }

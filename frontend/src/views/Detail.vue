@@ -28,6 +28,8 @@
           </div>
           <div class="action-buttons">
             <el-button type="primary" @click="goOptimize">优化简历</el-button>
+            <!-- 新增：预览简历按钮 -->
+            <el-button type="info" @click="goPreview">预览简历</el-button>
             <!-- 新增：查看历史按钮 -->
             <el-button type="warning" @click="goHistory">查看历史</el-button>
             <el-button type="info" @click="exportPDF('original')">导出原始PDF</el-button>
@@ -272,6 +274,12 @@ const exportPDF = async (type) => {
  */
 const goHistory = () => {
   router.push(`/history/${resumeData.value.id}`)
+}
+/**
+ * 跳转到预览模版页面
+ */
+const goPreview = () => {
+  router.push(`/preview/${resumeData.value.id}`)
 }
 
 /**

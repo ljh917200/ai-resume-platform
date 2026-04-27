@@ -46,6 +46,12 @@ const router = createRouter({
       name: 'OptimizeHistory',
       component: () => import('../views/History.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/preview/:id',
+      name: 'Preview',
+      component: () => import('../views/Preview.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

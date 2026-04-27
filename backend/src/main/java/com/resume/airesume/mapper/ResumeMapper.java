@@ -26,9 +26,13 @@ public interface ResumeMapper {
     @Delete("DELETE FROM resume WHERE id = #{id}")
     int deleteById(Long id);
 
-    // 更新简历
-    @Update("UPDATE resume SET original_text=#{originalText}, structured_data=#{structuredData}, optimized_structured_data=#{optimizedStructuredData} WHERE id=#{id}")
+    // 更新简历  更新简历内容（文本、结构化数据等），在优化简历时用
+    @Update("UPDATE resume SET original_text=#{originalText}, structured_data=#{structuredData}, optimized_structured_data=#{optimizedStructuredData}, template_id=#{templateId} WHERE id=#{id}")
     int update(Resume resume);
+
+    // 更新简历模板  只更新模板ID，在用户切换模板时用
+    @Update("UPDATE resume SET template_id = #{templateId} WHERE id = #{id} AND user_id = #{userId}")
+    int updateTemplateId(@Param("id") Long id, @Param("userId") Long userId, @Param("templateId") Integer templateId);
 
     // 更新优化内容
     @Update("UPDATE resume SET optimized_text = #{optimizedText},optimized_structured_data=#{optimizedStructuredData}, last_optimized_at = #{lastOptimizedAt} WHERE id = #{id}")

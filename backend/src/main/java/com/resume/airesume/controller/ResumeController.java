@@ -8,6 +8,7 @@ import com.resume.airesume.service.ResumeService;
 import com.resume.airesume.util.PdfExportUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -257,15 +258,17 @@ public class ResumeController {
     /**
      * 导出简历PDF
      *
-     * @param id      简历ID
-     * @param type    导出类型：original（原始内容）/ optimized（优化后内容）
-     * @param request HTTP请求对象
-     * @param response HTTP响应对象
+     * @param id         简历ID
+     * @param type       导出类型：original（原始内容）/ optimized（优化后内容）
+     * @param templateId 模板ID：1-简约蓝 2-商务灰 3-创意橙（可选，不传则用简历保存的模板）
+     * @param request    HTTP请求对象
+     * @param response   HTTP响应对象
      */
     @GetMapping("/export/{id}")
     public void exportResume(
             @PathVariable("id") Long id,
             @RequestParam(value = "type", defaultValue = "optimized") String type,
+            @RequestParam(value = "templateId", required = false) Integer templateId,
             HttpServletRequest request,
             HttpServletResponse response) {
         try {
@@ -285,17 +288,22 @@ public class ResumeController {
                 return;
             }
 
-            // 3. 根据类型选择内容
+            // 3. 如果没传templateId，使用简历保存的模板（默认为1）
+            if (templateId == null) {
+                templateId = resume.getTemplateId() != null ? resume.getTemplateId() : 1;
+            }
+
+            // 4. 根据类型选择内容
             String content;
+            String structuredDataForExport;
             String title;
-            String structuredDataForExport;  // ★ 新增：根据类型选不同的结构化数据
             if ("original".equals(type)) {
                 content = resume.getOriginalText();
-                structuredDataForExport = resume.getStructuredData();           // 原始结构化
+                structuredDataForExport = resume.getStructuredData();
                 title = "简历（原始版本）";
             } else {
                 content = resume.getOptimizedText();
-                structuredDataForExport = resume.getOptimizedStructuredData();  // 优化版结构化
+                structuredDataForExport = resume.getOptimizedStructuredData();
                 if (content == null || content.isEmpty()) {
                     response.setContentType("application/json;charset=UTF-8");
                     response.getWriter().write("{\"code\":400,\"message\":\"该简历尚未优化\"}");
@@ -304,28 +312,25 @@ public class ResumeController {
                 title = "简历（优化版本）";
             }
 
-            // 4. 生成PDF
-            byte[] pdfBytes = pdfExportUtil.generatePdfFromStructuredData(structuredDataForExport, content);
+            // 5. 生成PDF（传入三个参数：结构化数据、原始文本、模板ID）
+            byte[] pdfBytes = pdfExportUtil.generatePdfFromStructuredData(structuredDataForExport, content, templateId);
 
-            // 5. 生成文件名
+            // 6. 生成文件名
             String date = java.time.LocalDate.now().toString().replace("-", "");
             String fileName = "简历_" + date + ".pdf";
 
-            // 6. 设置响应头
+            // 7. 设置响应头
             response.setContentType("application/pdf");
             response.setCharacterEncoding("UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=" +
                     new String(fileName.getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1));
             response.setContentLength(pdfBytes.length);
 
-            // 7. 写入响应流
+            // 8. 写入响应流
             try (java.io.OutputStream outputStream = response.getOutputStream()) {
                 outputStream.write(pdfBytes);
                 outputStream.flush();
             }
-
-            System.out.println(">>> structuredData=" + resume.getStructuredData());
-            System.out.println(">>> optimizedStructuredData=" + resume.getOptimizedStructuredData());
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -337,7 +342,6 @@ public class ResumeController {
             }
         }
     }
-
 
     /**
      * 重命名简历
@@ -421,5 +425,33 @@ public class ResumeController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 切换简历模板
+     */
+    @PutMapping("/{id}/template")
+    public Result switchTemplate(
+            @PathVariable Long id,
+            @RequestParam Integer templateId,
+            HttpServletRequest request) {
+
+        // 1. 获取当前登录用户ID
+        Long userId = (Long) request.getAttribute("userId");
+        if (userId == null) {
+            return Result.error("用户未登录");
+        }
+
+        try {
+            boolean success = resumeService.switchTemplate(id, userId, templateId);
+            if (success) {
+                return Result.success("模板切换成功");
+            } else {
+                return Result.error("模板切换失败");
+            }
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
 
 }

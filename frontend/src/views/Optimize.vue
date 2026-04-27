@@ -524,7 +524,7 @@ const copyOptimized = () => {
  */
 const handleExport = async (type) => {
   try {
-    const res = await exportResume(resume.value.id, type)
+    const res = await exportResume(resume.value.id, type, resume.value.templateId)
     const blob = new Blob([res])
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')

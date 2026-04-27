@@ -136,4 +136,24 @@ public class ResumeServiceImpl implements ResumeService {
         // 批量删除（SQL中会验证用户归属）
         return resumeMapper.batchDelete(ids, userId);
     }
+
+    @Override
+    public boolean switchTemplate(Long id, Long userId, Integer templateId) {
+        // 验证模板ID
+        if (templateId < 1 || templateId > 3) {
+            throw new RuntimeException("模板ID无效，请选择1-3");
+        }
+
+        // 验证简历是否存在且属于该用户
+        Resume resume = resumeMapper.findById(id);
+        if (resume == null) {
+            throw new RuntimeException("简历不存在");
+        }
+        if (!resume.getUserId().equals(userId)) {
+            throw new RuntimeException("无权修改此简历");
+        }
+
+        return resumeMapper.updateTemplateId(id, userId, templateId) > 0;
+    }
+
 }
