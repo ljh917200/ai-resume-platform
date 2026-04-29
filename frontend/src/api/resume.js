@@ -73,3 +73,45 @@ export function switchTemplate(resumeId, templateId) {
         params: { templateId }
     })
 }
+
+/**
+ * 生成简历HTML（v1.7.0新增）
+ *
+ * 功能说明：
+ * - 调用后端接口，让 DeepSeek 生成 XHTML 格式的简历
+ * - 返回 HTML 内容供前端 iframe 预览
+ *
+ * @param {number} id - 简历ID
+ * @param {string} type - 类型：'original'-原始版，'optimized'-优化版
+ * @param {number} templateId - 模板ID：1-简约蓝 2-商务灰 3-创意橙
+ * @returns {Promise} 返回HTML内容
+ */
+export const generateHtml = (id, type, templateId) => {
+    return request({
+        url: '/resume/generate-html',
+        method: 'post',
+        params: {id, type, templateId}
+    })
+}
+
+/**
+ * 从HTML导出PDF（v1.7.0新增）
+ *
+ * 功能说明：
+ * - 调用后端接口，将已生成的 HTML 转换为 PDF 并下载
+ * - 后端使用 Flying Saucer 处理转换
+ *
+ * @param {number} id - 简历ID
+ * @param {string} type - 类型：'original'-原始版，'optimized'-优化版
+ * @param {number} templateId - 模板ID：1-简约蓝 2-商务灰 3-创意橙
+ * @returns {Promise} 返回Blob格式的PDF文件
+ */
+export const exportFromHtml = (id, type, templateId) => {
+    return request({
+        url: '/resume/export-from-html',
+        method: 'post',
+        params: {id, type, templateId},
+        // 指定响应类型为 blob，用于处理文件下载
+        responseType: 'blob'
+    })
+}

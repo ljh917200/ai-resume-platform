@@ -1,10 +1,13 @@
 package com.resume.airesume.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resume.airesume.dto.Result;
 import com.resume.airesume.entity.Resume;
 import com.resume.airesume.service.DeepSeekService;
 import com.resume.airesume.service.OptimizeHistoryService;
+import com.resume.airesume.service.PreGenerateService;
 import com.resume.airesume.service.ResumeService;
+import com.resume.airesume.util.HtmlToPdfUtil;
 import com.resume.airesume.util.PdfExportUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -36,9 +39,20 @@ public class ResumeController {
     @Autowired
     private PdfExportUtil pdfExportUtil;
 
+    // 注入HTML转PDF工具（v1.7.0新增）
+    @Autowired
+    private HtmlToPdfUtil htmlToPdfUtil;
+
     //注入优化历史服务
     @Autowired
     private OptimizeHistoryService optimizeHistoryService;
+
+    @Autowired
+    private PreGenerateService preGenerateService;  // 新增注入
+
+
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 上传简历
@@ -83,6 +97,8 @@ public class ResumeController {
 
             // 5. 调用Service上传简历
             Resume resume = resumeService.upload(userId, file);
+
+
 
             // 6. 构建返回数据（不返回完整文本，只返回基本信息）
             Map<String, Object> data = new HashMap<>();
@@ -240,6 +256,15 @@ public class ResumeController {
             // 保存历史失败不影响主流程，记录日志即可
             System.err.println("保存优化历史失败：" + e.getMessage());
         }
+
+        // ========== 新增：启动异步预生成 ==========
+        preGenerateService.preGenerateHtmlTemplates(
+                id,
+                userId,
+                optimizedStructuredData,
+                "optimized"
+        );
+        // ==========================================
 
         // 7. 构建返回结果
         Map<String, Object> data = new HashMap<>();
@@ -454,4 +479,246 @@ public class ResumeController {
     }
 
 
+    /**
+     * 生成简历HTML（v1.7.0优化版）
+     *
+     * 功能说明：
+     * - 调用 DeepSeek 根据结构化数据生成 XHTML 格式的简历
+     * - 使用JSON存储所有模板的HTML，切换模板时缓存命中秒返回
+     * - 懒加载：只有用户选择的模板才生成，节省AI调用成本
+     *
+     * @param id 简历ID
+     * @param type 类型：original-原始版，optimized-优化版
+     * @param templateId 模板ID
+     * @param request HTTP请求对象（获取用户ID）
+     * @return 包含 HTML 内容的响应
+     */
+    @PostMapping("/generate-html")
+    public Result<Map<String, Object>> generateHtml(
+            @RequestParam("id") Long id,
+            @RequestParam(value = "type", defaultValue = "original") String type,
+            @RequestParam(value = "templateId", required = false) Integer templateId,
+            HttpServletRequest request) {
+
+        // 1. 获取当前登录用户ID
+        Long userId = (Long) request.getAttribute("userId");
+        if (userId == null) {
+            return Result.error("用户未登录");
+        }
+
+        try {
+            // 2. 查询简历并验证归属
+            Resume resume = resumeService.getById(id, userId);
+            if (resume == null) {
+                return Result.error("简历不存在");
+            }
+
+            // 3. 确定模板ID（没传就用简历保存的模板，默认1）
+            if (templateId == null) {
+                templateId = resume.getTemplateId() != null ? resume.getTemplateId() : 1;
+            }
+
+            // 4. 选择对应的结构化数据和HTML字段
+            String structuredData;
+            String htmlJson; // 存储所有模板HTML的JSON字符串
+
+            if ("optimized".equals(type)) {
+                // 优化版
+                if (resume.getOptimizedStructuredData() == null || resume.getOptimizedStructuredData().isEmpty()) {
+                    return Result.error("该简历尚未优化，无法生成优化版HTML");
+                }
+                structuredData = resume.getOptimizedStructuredData();
+                htmlJson = resume.getOptimizedHtml();
+            } else {
+                // 原始版
+                if (resume.getStructuredData() == null || resume.getStructuredData().isEmpty()) {
+                    return Result.error("简历结构化数据为空，请重新上传");
+                }
+                structuredData = resume.getStructuredData();
+                htmlJson = resume.getGeneratedHtml();
+            }
+
+            // 5. 解析JSON，获取所有已缓存的模板HTML
+            Map<String, String> htmlMap = new HashMap<>();
+            if (htmlJson != null && !htmlJson.isEmpty()) {
+                try {
+                    // 尝试解析JSON
+                    Map<String, String> parsedMap = objectMapper.readValue(htmlJson, Map.class);
+                    htmlMap.putAll(parsedMap);
+                } catch (Exception e) {
+                    // JSON解析失败，可能是旧数据格式（单个HTML字符串）
+                    // 检查是否以 <!DOCTYPE 开头（旧格式：单个HTML字符串）
+                    if (htmlJson.trim().startsWith("<!DOCTYPE")) {
+                        // 旧格式：单个HTML字符串，尝试保留
+                        htmlMap.put("1", htmlJson);  // 默认存为模板1
+                        System.out.println("[缓存] 检测到旧格式HTML，已迁移到模板1");
+                    } else {
+                        // 其他异常格式，重新生成
+                        System.out.println("[缓存] HTML格式异常，将重新生成：" + e.getMessage());
+                    }
+                }
+            }
+
+            // 6. 检查目标模板是否已缓存
+            String targetKey = String.valueOf(templateId);
+            String htmlContent = htmlMap.get(targetKey);
+
+            boolean needGenerate = (htmlContent == null || htmlContent.isEmpty());
+
+            if (needGenerate) {
+                // 需要生成：调用 DeepSeek
+                htmlContent = deepSeekService.generateResumeHtml(structuredData, templateId);
+                if (htmlContent == null || htmlContent.isEmpty()) {
+                    return Result.error("HTML生成失败，请稍后重试");
+                }
+
+                // 更新缓存Map
+                htmlMap.put(targetKey, htmlContent);
+
+                // 转为JSON保存到数据库
+                String newHtmlJson = objectMapper.writeValueAsString(htmlMap);
+
+                // 保存到数据库
+                if ("optimized".equals(type)) {
+                    resumeService.updateOptimizedHtml(id, userId, newHtmlJson);
+                } else {
+                    resumeService.updateGeneratedHtml(id, userId, newHtmlJson);
+                }
+
+                // 更新当前选中的模板ID
+                resumeService.switchTemplate(id, userId, templateId);
+            }
+
+            // 7. 返回结果
+            Map<String, Object> data = new HashMap<>();
+            data.put("id", id);
+            data.put("htmlContent", htmlContent);
+            data.put("type", type);
+            data.put("templateId", templateId);
+            data.put("fromCache", !needGenerate);
+
+            return Result.success("HTML生成成功", data);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("生成失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 从HTML导出PDF（v1.7.0）
+     */
+    @PostMapping("/export-from-html")
+    public void exportFromHtml(
+            @RequestParam("id") Long id,
+            @RequestParam(value = "type", defaultValue = "original") String type,
+            @RequestParam(value = "templateId", required = false) Integer templateId,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+
+        // 1. 获取当前登录用户ID
+        Long userId = (Long) request.getAttribute("userId");
+        if (userId == null) {
+            try {
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":401,\"message\":\"用户未登录\"}");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
+        try {
+            // 2. 查询简历并验证归属
+            Resume resume = resumeService.getById(id, userId);
+            if (resume == null) {
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":404,\"message\":\"简历不存在\"}");
+                return;
+            }
+
+            // 3. 确定模板ID
+            if (templateId == null) {
+                templateId = resume.getTemplateId() != null ? resume.getTemplateId() : 1;
+            }
+
+            // 4. 获取对应的 HTML JSON
+            String htmlJson;
+            String fileTitle;
+
+            if ("optimized".equals(type)) {
+                htmlJson = resume.getOptimizedHtml();
+                fileTitle = "简历_优化版";
+                if (htmlJson == null || htmlJson.isEmpty()) {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"code\":400,\"message\":\"请先生成优化版HTML\"}");
+                    return;
+                }
+            } else {
+                htmlJson = resume.getGeneratedHtml();
+                fileTitle = "简历_原始版";
+                if (htmlJson == null || htmlJson.isEmpty()) {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"code\":400,\"message\":\"请先生成原始版HTML\"}");
+                    return;
+                }
+            }
+
+            // 5. 从JSON中提取目标模板的HTML
+            String htmlContent;
+            try {
+                Map<String, String> htmlMap = objectMapper.readValue(htmlJson, Map.class);
+                htmlContent = htmlMap.get(String.valueOf(templateId));
+                if (htmlContent == null || htmlContent.isEmpty()) {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"code\":400,\"message\":\"该模板HTML未生成，请先在预览页面选择该模板\"}");
+                    return;
+                }
+            } catch (Exception e) {
+                // 旧数据格式，直接使用
+                htmlContent = htmlJson;
+            }
+
+            // 6. 使用 Flying Saucer 将 HTML 转换为 PDF
+            byte[] pdfBytes = htmlToPdfUtil.convertToPdf(htmlContent);
+
+            // 7. 生成文件名
+            String date = java.time.LocalDate.now().toString().replace("-", "");
+            String templateName = getTemplateName(templateId);
+            String fileName = fileTitle + "_" + templateName + "_" + date + ".pdf";
+
+            // 8. 设置响应头
+            response.setContentType("application/pdf");
+            response.setCharacterEncoding("UTF-8");
+            response.setHeader("Content-Disposition", "attachment; filename=" + new String(fileName.getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1));
+            response.setContentLength(pdfBytes.length);
+
+            // 9. 将 PDF 写入响应流
+            try (java.io.OutputStream outputStream = response.getOutputStream()) {
+                outputStream.write(pdfBytes);
+                outputStream.flush();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            try {
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":500,\"message\":\"导出失败: " + e.getMessage() + "\"}");
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * 根据模板ID获取模板名称
+     */
+    private String getTemplateName(Integer templateId) {
+        if (templateId == null) return "简约蓝";
+        switch (templateId) {
+            case 2: return "商务灰";
+            case 3: return "创意橙";
+            default: return "简约蓝";
+        }
+    }
 }

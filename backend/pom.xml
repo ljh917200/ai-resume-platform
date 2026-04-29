@@ -126,6 +126,17 @@
 			<version>20231013</version>
 		</dependency>
 
+		<!-- Flying Saucer: HTML转PDF（v1.7.0新增） -->
+		<!--
+            Flying Saucer 是一个开源的 XHTML/CSS 渲染器，支持将 XHTML 转换为 PDF
+            itext5 版本配合 iText 5 使用
+            官网：https://github.com/flyingsaucerproject/flyingsaucer
+        -->
+		<dependency>
+			<groupId>org.xhtmlrenderer</groupId>
+			<artifactId>flying-saucer-pdf-itext5</artifactId>
+			<version>9.1.22</version>
+		</dependency>
 	</dependencies>
 
 	<build>

@@ -217,7 +217,6 @@ public class DeepSeekService {
                     Map<String, String> message = (Map<String, String>) firstChoice.get("message");
                     String content = message.get("content");
 
-
                     // 提取JSON部分（去除markdown代码块标记）
                     return extractJson(content);
                 }
@@ -359,5 +358,364 @@ public class DeepSeekService {
         }
 
         return content.trim();
+    }
+
+
+    /**
+     * 生成简历HTML（v1.7.0新增）
+     *
+     * 功能说明：
+     * - 根据结构化简历数据，调用 DeepSeek 生成 XHTML 格式的简历
+     * - 生成的 HTML 包含内嵌 CSS 样式，可以直接预览和转 PDF
+     * - 根据 templateId 使用不同的配色方案（简约蓝/商务灰/创意橙）
+     *
+     * 使用场景：
+     * - 用户点击"预览简历"或"导出PDF"时，先调用此方法生成 HTML
+     * - 生成的 HTML 会存储到数据库，后续预览直接使用缓存
+     *
+     * @param structuredDataJson 结构化简历数据（JSON格式），包含姓名、教育、工作经历等
+     * @param templateId 模板ID：1-简约蓝 2-商务灰 3-创意橙
+     * @return XHTML 格式的简历 HTML 字符串，失败返回 null
+     */
+    public String generateResumeHtml(String structuredDataJson, Integer templateId) {
+        // ========== 第一步：构建请求体 ==========
+        Map<String, Object> requestBody = new HashMap<>();
+
+        // 指定使用 deepseek-chat 模型
+        requestBody.put("model", "deepseek-chat");
+
+        // 构建消息列表
+        List<Map<String, String>> messages = new ArrayList<>();
+
+        // 系统消息：包含详细的 HTML 生成提示词
+        Map<String, String> systemMessage = new HashMap<>();
+        systemMessage.put("role", "system");
+        systemMessage.put("content", buildHtmlGenerationPrompt(templateId));
+        messages.add(systemMessage);
+
+        // 用户消息：提供结构化数据
+        Map<String, String> userMessage = new HashMap<>();
+        userMessage.put("role", "user");
+        userMessage.put("content", "请根据以下结构化数据生成简历HTML：\n" + structuredDataJson);
+        messages.add(userMessage);
+
+        requestBody.put("messages", messages);
+
+        // 温度参数：0.3（结构化任务需要稳定性，不要太随机）
+        requestBody.put("temperature", 0.3);
+
+        // 最大输出 token 数：3000（HTML 内容较多，需要充足空间）
+        requestBody.put("max_tokens", 3000);
+
+        // ========== 第二步：设置请求头 ==========
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(deepSeekConfig.getKey());
+
+        // ========== 第三步：发送请求 ==========
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        try {
+            // 发送 POST 请求到 DeepSeek API
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    deepSeekConfig.getUrl(),
+                    HttpMethod.POST,
+                    entity,
+                    Map.class
+            );
+
+            // ========== 第四步：解析响应 ==========
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> body = response.getBody();
+                List<Map<String, Object>> choices = (List<Map<String, Object>>) body.get("choices");
+
+                if (choices != null && !choices.isEmpty()) {
+                    Map<String, Object> firstChoice = choices.get(0);
+                    Map<String, String> message = (Map<String, String>) firstChoice.get("message");
+                    String htmlContent = message.get("content");
+
+                    // 提取纯净的 HTML 内容（去除 markdown 代码块标记）
+                    return extractHtml(htmlContent);
+                }
+            }
+            return null;
+
+        } catch (Exception e) {
+            System.err.println("生成简历HTML失败：" + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 构建HTML生成提示词（v1.7.0修复版）
+     * ★ 修复：body只设置margin: 0，不设置padding
+     */
+    private String buildHtmlGenerationPrompt(Integer templateId) {
+        if (templateId == null) templateId = 1;
+
+        String styleGuide = getTemplateStyleGuide(templateId);
+
+        StringBuilder prompt = new StringBuilder();
+
+        prompt.append("你是一位专业的简历设计师，精通XHTML和CSS。\n\n");
+
+        prompt.append("【输出要求 - 必须严格遵守】\n");
+        prompt.append("1. 只输出完整的XHTML代码，不要包含任何解释、说明或注释\n");
+        prompt.append("2. 第一行必须是DOCTYPE声明，前面不能有任何内容（包括空格和换行）\n");
+        prompt.append("3. XHTML必须严格符合XML规范：\n");
+        prompt.append("   - 所有标签必须正确闭合，如 <br/> 而不是 <br>\n");
+        prompt.append("   - 所有属性值必须用双引号包裹\n");
+        prompt.append("   - 特殊字符必须转义：&amp; &lt; &gt; &quot;\n");
+        prompt.append("   - 标签必须正确嵌套\n");
+        prompt.append("4. 所有样式必须内嵌在<style>标签中\n");
+        prompt.append("5. 必须使用中文字体：Microsoft YaHei, SimHei, PingFang SC\n");
+        prompt.append("6. 禁止使用JavaScript\n");
+        prompt.append("7. 禁止使用CSS3特性（flex、grid、linear-gradient等）\n\n");
+
+        // ★ 修复：body只设置margin: 0
+        prompt.append("【样式强制要求 - 必须遵守】\n");
+        prompt.append("1. body样式必须包含：margin: 0; （不要设置padding）\n");
+        prompt.append("2. 内容宽度：700px，居中显示\n");
+        prompt.append("3. 禁止设置任何背景色！包括body、div、table、td等的background-color\n");
+        prompt.append("4. 禁止body或外层容器设置overflow: hidden\n\n");
+
+        prompt.append("【禁止事项 - 违反将导致失败】\n");
+        prompt.append("1. 禁止生成没有内容的空div、空table、空容器\n");
+        prompt.append("2. 禁止给任何容器设置背景色\n");
+        prompt.append("3. 禁止使用占位符文字如\"待填写\"、\"无\"等\n");
+        prompt.append("4. 如果某个模块没有数据，直接跳过该模块，不要生成空容器\n\n");
+
+        prompt.append("【XHTML模板 - 必须严格按此格式】\n");
+        prompt.append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n");
+        prompt.append("<html xmlns=\"http://www.w3.org/1999/xhtml\">\n");
+        prompt.append("<head>\n");
+        prompt.append("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>\n");
+        prompt.append("<title>简历</title>\n");
+        prompt.append("<style type=\"text/css\">\n");
+        prompt.append("body { font-family: 'Microsoft YaHei', 'SimHei', sans-serif; margin: 0; }\n");
+        prompt.append(".container { width: 690px; margin: 0 auto; }\n");
+        prompt.append("/* 其他样式：不要设置任何background-color */\n");
+        prompt.append("</style>\n");
+        prompt.append("</head>\n");
+        prompt.append("<body>\n");
+        prompt.append("<div class=\"container\">\n");
+        prompt.append("/* 在这里写简历内容，不要设置背景色 */\n");
+        prompt.append("</div>\n");
+        prompt.append("</body>\n");
+        prompt.append("</html>\n\n");
+
+        prompt.append("【设计风格】\n");
+        prompt.append(styleGuide);
+        prompt.append("\n\n");
+
+        prompt.append("【内容结构】\n");
+        prompt.append("根据JSON数据生成以下模块（有数据才生成，无数据跳过）：\n");
+        prompt.append("- 姓名 + 联系方式\n");
+        prompt.append("- 教育经历\n");
+        prompt.append("- 工作/实习经历\n");
+        prompt.append("- 项目经历\n");
+        prompt.append("- 专业技能\n");
+        prompt.append("- 荣誉奖项\n");
+        prompt.append("- 证书资质\n");
+        prompt.append("- 自我评价\n\n");
+
+        prompt.append("【重要：样式限制】\n");
+        prompt.append("- 只能使用color属性设置文字颜色\n");
+        prompt.append("- 可以使用border设置边框\n");
+        prompt.append("- 不要使用任何背景色\n");
+        prompt.append("请严格按照上述XHTML模板格式生成简历代码，确保XML结构正确：");
+
+        return prompt.toString();
+    }
+
+    /**
+     * 从AI响应中提取HTML内容并清理
+     */
+    private String extractHtml(String content) {
+        if (content == null) return null;
+
+        content = content.trim();
+
+        // 去除 markdown 代码块标记
+        if (content.startsWith("```html")) {
+            content = content.substring(7);
+        } else if (content.startsWith("```xml")) {
+            content = content.substring(7);
+        } else if (content.startsWith("```")) {
+            content = content.substring(3);
+        }
+        if (content.endsWith("```")) {
+            content = content.substring(0, content.length() - 3);
+        }
+
+        content = content.trim();
+
+        // 清理DOCTYPE前的所有内容
+        int doctypeIndex = content.indexOf("<!DOCTYPE");
+        if (doctypeIndex > 0) {
+            content = content.substring(doctypeIndex);
+        }
+
+        // 修复常见的XHTML格式问题
+        content = content.replaceAll("<br>", "<br/>");
+        content = content.replaceAll("<br />", "<br/>");
+        content = content.replaceAll("<hr>", "<hr/>");
+        content = content.replaceAll("<hr />", "<hr/>");
+        content = content.replaceAll("<img([^>]*)>", "<img$1/>");
+        content = content.replaceAll("<input([^>]*)>", "<input$1/>");
+
+        return content;
+    }
+
+    /**
+     * 根据模板ID获取风格指南
+     * ★ 修复：去掉所有padding和背景色要求
+     */
+    private String getTemplateStyleGuide(Integer templateId) {
+        return switch (templateId) {
+            case 2 -> """
+            === 商务灰风格（模板2）===
+            
+            【重要：CSS兼容性要求】
+            - 必须使用CSS2.1兼容布局，禁止使用flex、grid、linear-gradient
+            - 双栏布局必须使用<table>或float实现
+            - 禁止使用任何背景色
+            - 只能使用边框和文字颜色区分区域
+            
+            【定位】传统企业、国企、事业单位、银行
+            【气质】稳重、专业、正式
+            
+            【布局设计 - 使用table实现双栏】
+            使用<table>布局：
+            - 外层表格：宽度690px，两列布局
+            - 左列：宽度210px，右侧有分隔线（border-right）
+            - 右列：宽度480px，无背景色
+            - 无任何背景色！
+            
+            左列内容：
+            - 姓名区域（18pt，加粗，深灰色#2C3E50）
+            - 联系方式（紧凑排列）
+            - 技能区域
+            
+            右列内容：
+            - 工作经历（公司名加粗，时间右对齐）
+            - 教育经历
+            - 项目经历
+            
+            【配色方案 - 只有文字和边框】
+            - 主色调：#5A6A7A
+            - 深色：#2C3E50
+            - 辅助色：#7F8C8D
+            - 分隔线：1px solid #E0E0E0
+            - 无任何背景色！
+            
+            【排版细节】
+            - 姓名：18pt，加粗，#2C3E50
+            - 模块标题：12pt，加粗，#5A6A7A
+            - 正文：10pt，行高1.6，#333333
+            - 时间：9pt，右对齐，#666666
+            
+            【严格禁止】
+            1. 禁止生成空容器
+            2. 禁止设置任何background-color
+            3. 如果某个模块没有数据，直接跳过
+            """;
+
+            case 3 -> """
+            === 创意橙风格（模板3）===
+            
+            【重要：CSS兼容性要求】
+            - 必须使用CSS2.1兼容布局，禁止使用flex、grid、linear-gradient
+            - 单栏布局使用普通div即可
+            - 禁止使用任何背景色
+            - 只能用边框和文字颜色区分模块
+            
+            【定位】互联网、创意行业、应届生
+            【气质】活力、创新、个性
+            
+            【布局设计 - 单栏布局】
+            外层容器：
+            - 宽度690px，居中
+            - 无背景色
+            
+            顶部区域：
+            - 姓名：24pt，粗体，#F76B1C，居中
+            - 求职意向：12pt，居中
+            - 联系方式：小标签形式
+            
+            主体区域：
+            - 各模块垂直排列
+            - 模块间距：16px
+            - 模块之间用分隔线区分
+            
+            【配色方案 - 只有文字和边框】
+            - 主色调：#F76B1C
+            - 辅助色：#FF9A56
+            - 正文色：#2D2D2D
+            - 模块分隔：1px solid #FFE8D6
+            - 无任何背景色！
+            
+            【排版细节】
+            - 姓名：24pt，粗体，#F76B1C
+            - 模块标题：12pt，粗体，#F76B1C，底部边框
+            - 正文：10pt，行高1.6，#333333
+            - 时间：9pt，灰色
+            
+            【装饰元素】
+            - 模块标题前：4px宽的#F76B1C竖线（用border-left实现）
+            
+            【严格禁止】
+            1. 禁止生成空容器
+            2. 禁止设置任何background-color
+            3. 如果某个模块没有数据，直接跳过
+            """;
+
+            default -> """
+            === 简约蓝风格（模板1）===
+            
+            【重要：CSS兼容性要求】
+            - 必须使用CSS2.1兼容布局，禁止使用flex、grid
+            - 单栏布局使用普通div即可
+            - 禁止使用任何背景色
+            
+            【定位】科技公司、外企、通用
+            【气质】简洁、现代、专业
+            
+            【布局设计 - 单栏布局】
+            外层容器：
+            - 宽度690px，居中
+            - 无背景色
+            
+            顶部区域：
+            - 姓名：22pt，粗体，#4A90E2，左对齐
+            - 求职意向：11pt，#666666
+            - 联系方式：10pt，#888888
+            
+            主体区域：
+            - 各模块垂直排列
+            - 模块间距：20px
+            
+            【配色方案 - 只有文字和边框】
+            - 主色调：#4A90E2
+            - 深色：#357ABD
+            - 正文色：#333333
+            - 分隔线：1px solid #E8F4FF
+            - 无任何背景色！
+            
+            【排版细节】
+            - 姓名：22pt，粗体，#4A90E2
+            - 模块标题：13pt，粗体，#4A90E2，底部边框
+            - 正文：10pt，行高1.6，#333333
+            - 时间：9pt，#888888
+            
+            【装饰元素】
+            - 模块标题：底部1px边框，#4A90E2
+            
+            【严格禁止】
+            1. 禁止生成空容器
+            2. 禁止设置任何background-color
+            3. 如果某个模块没有数据，直接跳过
+            """;
+        };
     }
 }

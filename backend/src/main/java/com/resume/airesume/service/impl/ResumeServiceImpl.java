@@ -4,6 +4,7 @@ import com.resume.airesume.entity.Resume;
 import com.resume.airesume.mapper.ResumeMapper;
 import com.resume.airesume.service.DeepSeekService;
 import com.resume.airesume.service.FileParseService;
+import com.resume.airesume.service.PreGenerateService;
 import com.resume.airesume.service.ResumeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,9 @@ public class ResumeServiceImpl implements ResumeService {
 
     @Autowired
     private DeepSeekService deepSeekService;
+
+    @Autowired
+    private PreGenerateService preGenerateService;  // 新增注入
 
     @Override
     public Resume upload(Long userId, MultipartFile file) {
@@ -61,6 +65,15 @@ public class ResumeServiceImpl implements ResumeService {
 
             // 保存到数据库
             resumeMapper.insert(resume);
+
+            // ========== 新增：启动异步预生成 ==========
+            preGenerateService.preGenerateHtmlTemplates(
+                    resume.getId(),
+                    userId,
+                    structuredData,
+                    "original"
+            );
+            // ==========================================
 
             return resume;
 
@@ -154,6 +167,46 @@ public class ResumeServiceImpl implements ResumeService {
         }
 
         return resumeMapper.updateTemplateId(id, userId, templateId) > 0;
+    }
+
+    /**
+     * 更新原始简历HTML（v1.7.0新增）
+     *
+     * 实现说明：
+     * - 直接调用 Mapper 的 updateGeneratedHtml 方法
+     * - 参数校验在 Controller 层已做，这里只执行存储
+     *
+     * @param resumeId 简历ID
+     * @param userId 用户ID
+     * @param generatedHtml 原始简历HTML内容
+     */
+    @Override
+    public void updateGeneratedHtml(Long resumeId, Long userId, String generatedHtml) {
+        resumeMapper.updateGeneratedHtml(resumeId, userId, generatedHtml);
+    }
+
+    /**
+     * 更新优化后简历HTML（v1.7.0新增）
+     *
+     * 实现说明：
+     * - 直接调用 Mapper 的 updateOptimizedHtml 方法
+     * - 参数校验在 Controller 层已做，这里只执行存储
+     *
+     * @param resumeId 简历ID
+     * @param userId 用户ID
+     * @param optimizedHtml 优化后简历HTML内容
+     */
+    @Override
+    public void updateOptimizedHtml(Long resumeId, Long userId, String optimizedHtml) {
+        resumeMapper.updateOptimizedHtml(resumeId, userId, optimizedHtml);
+    }
+
+    /**
+     * 更新HTML内容和模板ID
+     */
+    @Override
+    public void updateHtmlAndTemplate(Long id, Long userId, String htmlField, String htmlContent, Integer templateId) {
+        resumeMapper.updateHtmlAndTemplate(id, userId, htmlField, htmlContent, templateId);
     }
 
 }

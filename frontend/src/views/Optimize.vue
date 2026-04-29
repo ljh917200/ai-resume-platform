@@ -323,6 +323,10 @@
             <el-icon><i class="el-icon-download"></i></el-icon>
             导出原始PDF
           </el-button>
+          <el-button size="large" type="warning" @click="previewOptimizedHtml" :disabled="!optimizedText" :loading="previewLoading">
+            <el-icon><i class="el-icon-view"></i></el-icon>
+            预览HTML
+          </el-button>
           <el-button type="primary" size="large" @click="handleExport('optimized')">
             <el-icon><i class="el-icon-download"></i></el-icon>
             导出优化版PDF
@@ -334,6 +338,34 @@
         </div>
       </div>
     </el-main>
+
+    <!-- HTML预览弹窗（v1.7.0新增） -->
+    <el-dialog
+        v-model="showHtmlPreview"
+        title="简历预览"
+        width="70%"
+        top="5vh"
+        :close-on-click-modal="false"
+    >
+      <div v-if="previewLoading" class="preview-loading">
+        <el-icon class="is-loading" :size="40"><Loading /></el-icon>
+        <p>正在生成预览...</p>
+      </div>
+      <iframe
+          v-else-if="htmlPreviewUrl"
+          :src="htmlPreviewUrl"
+          class="preview-iframe"
+      ></iframe>
+      <template #footer>
+        <el-button @click="showHtmlPreview = false">关闭</el-button>
+        <el-button
+            type="success"
+            @click="exportFromHtmlHandler(currentPreviewType)"
+        >
+          导出PDF
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -342,7 +374,7 @@ import {ref, computed, onMounted} from 'vue'
 import {useRouter, useRoute} from 'vue-router'
 import {ElMessage} from 'element-plus'
 import {Loading} from '@element-plus/icons-vue'
-import {getResume, optimizeResume, exportResume} from '../api/resume'
+import {getResume, optimizeResume, exportResume, generateHtml, exportFromHtml} from '../api/resume'
 
 const router = useRouter()
 const route = useRoute()
@@ -357,6 +389,11 @@ const targetRole = ref('')
 const optimizedText = ref('')
 const optimizing = ref(false)
 const loadingResume = ref(true)
+// HTML预览相关（v1.7.0新增）
+const htmlPreviewUrl = ref('')           // iframe预览的URL
+const showHtmlPreview = ref(false)       // 预览弹窗显示状态
+const previewLoading = ref(false)        // 生成预览的加载状态
+const currentPreviewType = ref('')       // 当前预览类型：original/optimized
 
 // 计算属性：是否有结构化内容
 const hasContent = computed(() => {
@@ -503,6 +540,66 @@ const handleOptimize = async () => {
   }
 }
 
+
+/**
+ * 预览优化后的HTML（v1.7.0新增）
+ * 弹窗展示AI生成的优化后简历HTML
+ */
+const previewOptimizedHtml = async () => {
+  if (!resume.value) return
+
+  previewLoading.value = true
+  currentPreviewType.value = 'optimized'
+
+  try {
+    const templateId = resume.value.templateId || 1
+
+    // 调用API生成优化版HTML
+    const res = await generateHtml(resume.value.id, 'optimized', templateId)
+
+    if (res.code === 200) {
+      htmlPreviewUrl.value = 'data:text/html;charset=UTF-8,' + encodeURIComponent(res.data.htmlContent)
+      showHtmlPreview.value = true
+    } else {
+      ElMessage.error(res.message || '生成预览失败')
+    }
+  } catch (error) {
+    ElMessage.error('生成预览失败')
+    console.error('生成预览失败:', error)
+  } finally {
+    previewLoading.value = false
+  }
+}
+
+/**
+ * 从HTML导出PDF（v1.7.0新增）
+ * 使用新的HTML转PDF接口导出
+ *
+ * @param {string} type - 导出类型：original-原始版，optimized-优化版
+ */
+const exportFromHtmlHandler = async (type) => {
+  try {
+    const res = await exportFromHtml(resume.value.id, type)
+
+    const blob = new Blob([res], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = url
+    const typeName = type === 'original' ? '原始' : '优化'
+    link.setAttribute('download', `简历_${typeName}版.pdf`)
+
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    ElMessage.success('导出成功')
+  } catch (error) {
+    ElMessage.error('导出失败')
+    console.error('导出失败:', error)
+  }
+}
 /**
  * 复制原文
  */
@@ -867,5 +964,21 @@ const goBack = () => {
   justify-content: center;
   gap: 16px;
   padding: 16px 0;
+}
+
+/* HTML预览弹窗样式（v1.7.0新增） */
+.preview-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+}
+
+.preview-iframe {
+  width: 100%;
+  height: 70vh;
+  border: none;
+  background: #fff;
 }
 </style>

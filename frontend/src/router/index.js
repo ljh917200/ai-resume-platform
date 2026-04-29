@@ -1,5 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+/**
+ * 路由配置（v1.7.0 简化版）
+ *
+ * 变化：
+ * - 移除了 Detail.vue 和 Optimize.vue 的路由
+ * - Preview.vue 成为核心页面
+ * - 用户流程：首页 → 预览页（预览+优化+导出一体化）
+ */
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -24,9 +32,9 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/optimize',
-      name: 'Optimize',
-      component: () => import('../views/Optimize.vue'),
+      path: '/preview/:id',
+      name: 'Preview',
+      component: () => import('../views/Preview.vue'),
       meta: { requiresAuth: true }
     },
     {
@@ -36,21 +44,9 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/resume/:id',           // 新增：简历详情页路由
-      name: 'ResumeDetail',
-      component: () => import('../views/Detail.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
       path: '/history/:resumeId',
       name: 'OptimizeHistory',
       component: () => import('../views/History.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/preview/:id',
-      name: 'Preview',
-      component: () => import('../views/Preview.vue'),
       meta: { requiresAuth: true }
     }
   ]

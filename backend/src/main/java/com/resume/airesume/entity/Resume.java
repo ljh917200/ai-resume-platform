@@ -26,4 +26,15 @@ public class Resume {
      * 默认为1
      */
     private Integer templateId = 1;
+    /**
+     * AI生成的原始简历HTML（v1.7.0新增）
+     * DeepSeek 根据结构化数据生成的 XHTML 格式简历
+     */
+    private String generatedHtml;
+
+    /**
+     * AI生成的优化后简历HTML（v1.7.0新增）
+     * DeepSeek 根据优化后结构化数据生成的 XHTML 格式简历
+     */
+    private String optimizedHtml;
 }

@@ -65,4 +65,63 @@ public interface ResumeMapper {
             " AND user_id = #{userId}" +
             "</script>")
     int batchDelete(@Param("ids") List<Long> ids, @Param("userId") Long userId);
+
+    /**
+     * 更新原始简历HTML（v1.7.0新增）
+     * <p>
+     * 功能说明：
+     * - 将 DeepSeek 生成的原始简历 HTML 存储到数据库
+     * - 避免重复调用 AI，节省成本
+     *
+     * @param id            简历ID
+     * @param userId        用户ID（用于验证归属）
+     * @param generatedHtml AI生成的原始简历HTML内容
+     */
+    @Update("UPDATE resume SET generated_html = #{generatedHtml} WHERE id = #{id} AND user_id = #{userId}")
+    void updateGeneratedHtml(@Param("id") Long id, @Param("userId") Long userId, @Param("generatedHtml") String generatedHtml);
+
+    /**
+     * 更新优化后简历HTML（v1.7.0新增）
+     * <p>
+     * 功能说明：
+     * - 将 DeepSeek 生成的优化后简历 HTML 存储到数据库
+     * - 用户优化简历后，会生成优化版的 HTML
+     *
+     * @param id            简历ID
+     * @param userId        用户ID（用于验证归属）
+     * @param optimizedHtml AI生成的优化后简历HTML内容
+     */
+    @Update("UPDATE resume SET optimized_html = #{optimizedHtml} WHERE id = #{id} AND user_id = #{userId}")
+    void updateOptimizedHtml(@Param("id") Long id, @Param("userId") Long userId, @Param("optimizedHtml") String optimizedHtml);
+
+
+    /**
+     * 更新HTML内容和模板ID（v1.7.0新增）
+     * <p>
+     * 功能说明：
+     * - 同时更新 HTML 内容和模板 ID
+     * - 用于切换模板后重新生成 HTML
+     *
+     * @param id          简历ID
+     * @param userId      用户ID（验证归属）
+     * @param htmlField   要更新的HTML字段名：generated_html 或 optimized_html
+     * @param htmlContent HTML内容
+     * @param templateId  模板ID
+     */
+    @Update("<script>" +
+            "UPDATE resume SET " +
+            "<if test='htmlField == \"optimizedHtml\"'>" +
+            "optimized_html = #{htmlContent}, " +
+            "</if>" +
+            "<if test='htmlField == \"generatedHtml\"'>" +
+            "generated_html = #{htmlContent}, " +
+            "</if>" +
+            "template_id = #{templateId} " +
+            "WHERE id = #{id} AND user_id = #{userId}" +
+            "</script>")
+    void updateHtmlAndTemplate(@Param("id") Long id,
+                              @Param("userId") Long userId,
+                              @Param("htmlField") String htmlField,
+                              @Param("htmlContent") String htmlContent,
+                              @Param("templateId") Integer templateId);
 }

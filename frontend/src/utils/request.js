@@ -5,7 +5,7 @@ import { ElMessage, ElLoading } from 'element-plus'
 // VITE_API_BASE_URL 是环境变量，会根据开发/生产环境自动切换
 const request = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
-    timeout: 30000
+    timeout: 60000
 })
 
 // ========== 全局Loading控制 ==========

@@ -43,4 +43,33 @@ public interface ResumeService {
 
     boolean switchTemplate(Long id, Long userId, Integer templateId);
 
+    /**
+     * 更新原始简历HTML（v1.7.0新增）
+     *
+     * 功能说明：
+     * - 调用 Mapper 将 DeepSeek 生成的 HTML 存入数据库
+     *
+     * @param resumeId 简历ID
+     * @param userId 用户ID
+     * @param generatedHtml 原始简历HTML内容
+     */
+    void updateGeneratedHtml(Long resumeId, Long userId, String generatedHtml);
+
+    /**
+     * 更新优化后简历HTML（v1.7.0新增）
+     *
+     * 功能说明：
+     * - 调用 Mapper 将 DeepSeek 生成的优化版 HTML 存入数据库
+     *
+     * @param resumeId 简历ID
+     * @param userId 用户ID
+     * @param optimizedHtml 优化后简历HTML内容
+     */
+    void updateOptimizedHtml(Long resumeId, Long userId, String optimizedHtml);
+
+    /**
+     * 更新HTML内容和模板ID
+     */
+    void updateHtmlAndTemplate(Long id, Long userId, String htmlField, String htmlContent, Integer templateId);
+
 }

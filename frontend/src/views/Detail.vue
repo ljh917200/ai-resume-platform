@@ -30,6 +30,7 @@
             <el-button type="primary" @click="goOptimize">优化简历</el-button>
             <!-- 新增：预览简历按钮 -->
             <el-button type="info" @click="goPreview">预览简历</el-button>
+            <el-button type="info" @click="previewHtml('original')" :loading="previewLoading">预览HTML</el-button>
             <!-- 新增：查看历史按钮 -->
             <el-button type="warning" @click="goHistory">查看历史</el-button>
             <el-button type="info" @click="exportPDF('original')">导出原始PDF</el-button>
@@ -158,6 +159,35 @@
           <el-button type="primary" @click="goHome">返回首页</el-button>
         </el-empty>
       </div>
+
+      <!-- HTML预览弹窗（v1.7.0新增） -->
+      <el-dialog
+          v-model="showHtmlPreview"
+          title="简历预览"
+          width="70%"
+          top="5vh"
+          :close-on-click-modal="false"
+      >
+        <div v-if="previewLoading" class="preview-loading">
+          <el-icon class="is-loading" :size="40"><Loading /></el-icon>
+          <p>正在生成预览...</p>
+        </div>
+        <iframe
+            v-else-if="htmlPreviewUrl"
+            :src="htmlPreviewUrl"
+            class="preview-iframe"
+        ></iframe>
+        <template #footer>
+          <el-button @click="showHtmlPreview = false">关闭</el-button>
+          <el-button
+              type="success"
+              @click="exportFromHtmlHandler(currentPreviewType)"
+          >
+            导出PDF
+          </el-button>
+        </template>
+      </el-dialog>
+
     </el-main>
   </div>
 </template>
@@ -167,7 +197,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Loading, Phone, Message, School, Briefcase, Folder, Document } from '@element-plus/icons-vue'
-import { getResume, exportResume } from '../api/resume'
+import { getResume, exportResume, generateHtml, exportFromHtml } from '../api/resume'
 
 const route = useRoute()
 const router = useRouter()
@@ -178,6 +208,11 @@ const router = useRouter()
 const loading = ref(true)
 const resumeData = ref(null)
 const structuredData = ref(null)
+// HTML预览相关（v1.7.0新增）
+const htmlPreviewUrl = ref('')           // iframe预览的URL
+const showHtmlPreview = ref(false)       // 预览弹窗显示状态
+const previewLoading = ref(false)        // 生成预览的加载状态
+const currentPreviewType = ref('')       // 当前预览类型：original/optimized
 
 // 计算属性：是否有结构化数据
 const hasStructuredData = computed(() => {
@@ -266,6 +301,73 @@ const exportPDF = async (type) => {
     ElMessage.success('导出成功')
   } catch (error) {
     ElMessage.error('导出失败：' + (error.message || '未知错误'))
+  }
+}
+
+/**
+ * 预览HTML（v1.7.0新增）
+ * 弹窗展示AI生成的简历HTML
+ *
+ * @param {string} type - 预览类型：original-原始版，optimized-优化版
+ */
+const previewHtml = async (type) => {
+  if (!resumeData.value) return
+
+  previewLoading.value = true
+  currentPreviewType.value = type
+
+  try {
+    // 确定使用哪个模板
+    const templateId = resumeData.value.templateId || 1
+
+    // 调用API生成HTML
+    const res = await generateHtml(resumeData.value.id, type, templateId)
+
+    if (res.code === 200) {
+      // 生成iframe的data URL
+      htmlPreviewUrl.value = 'data:text/html;charset=UTF-8,' + encodeURIComponent(res.data.htmlContent)
+      showHtmlPreview.value = true
+    } else {
+      ElMessage.error(res.message || '生成预览失败')
+    }
+  } catch (error) {
+    ElMessage.error('生成预览失败')
+    console.error('生成预览失败:', error)
+  } finally {
+    previewLoading.value = false
+  }
+}
+
+/**
+ * 从HTML导出PDF（v1.7.0新增）
+ * 使用新的HTML转PDF接口导出
+ *
+ * @param {string} type - 导出类型：original-原始版，optimized-优化版
+ */
+const exportFromHtmlHandler = async (type) => {
+  try {
+    const res = await exportFromHtml(resumeData.value.id, type)
+
+    // 创建Blob对象
+    const blob = new Blob([res], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+
+    // 创建下载链接
+    const link = document.createElement('a')
+    link.href = url
+    const typeName = type === 'original' ? '原始' : '优化'
+    link.setAttribute('download', `简历_${typeName}版.pdf`)
+
+    // 触发下载
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    ElMessage.success('导出成功')
+  } catch (error) {
+    ElMessage.error('导出失败')
+    console.error('导出失败:', error)
   }
 }
 
@@ -541,5 +643,21 @@ const restructure = () => {
 .loading-container p {
   margin-top: 16px;
   color: #909399;
+}
+
+/* HTML预览弹窗样式（v1.7.0新增） */
+.preview-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+}
+
+.preview-iframe {
+  width: 100%;
+  height: 70vh;
+  border: none;
+  background: #fff;
 }
 </style>
