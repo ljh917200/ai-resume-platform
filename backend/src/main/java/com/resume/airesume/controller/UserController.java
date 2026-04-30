@@ -34,6 +34,10 @@ public class UserController {
     @Autowired
     private FileStorageService fileStorageService;
 
+    // 服务器基础地址（用于拼接头像完整URL）
+    @org.springframework.beans.factory.annotation.Value("${server.base-url:http://localhost:8080}")
+    private String serverBaseUrl;
+
     /**
      * 获取当前登录用户的基本信息
      *
@@ -55,12 +59,19 @@ public class UserController {
                 return Result.error("用户不存在");
             }
 
+            // 头像URL处理：如果是相对路径，拼接完整URL
+            String avatarUrl = user.getAvatarUrl();
+            if (avatarUrl != null && !avatarUrl.isEmpty() && !avatarUrl.startsWith("http")) {
+                avatarUrl = serverBaseUrl + avatarUrl;
+            }
+
+
             // 3. 构建返回数据（不返回密码哈希）
             Map<String, Object> data = new HashMap<>();
             data.put("id", user.getId());
             data.put("username", user.getUsername());
             data.put("email", user.getEmail());
-            data.put("avatarUrl", user.getAvatarUrl());
+            data.put("avatarUrl", avatarUrl);
             data.put("quotaUsed", user.getQuotaUsed());
             data.put("createdAt", user.getCreatedAt());
 

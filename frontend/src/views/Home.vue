@@ -7,8 +7,10 @@
         <span>AI简历优化</span>
       </div>
       <el-dropdown>
+        <!-- ★ 改造：有头像显示头像，没头像显示首字母 -->
         <div class="user-avatar">
-          <el-avatar :size="40">
+          <el-avatar v-if="userAvatarUrl" :size="40" :src="userAvatarUrl" />
+          <el-avatar v-else :size="40">
             {{ userName.charAt(0).toUpperCase() }}
           </el-avatar>
         </div>
@@ -140,7 +142,6 @@
         </div>
       </div>
 
-      <!-- 在 </el-main> 之前添加上传动画遮罩 -->
       <!-- 上传全屏遮罩 -->
       <transition name="fade">
         <div v-if="uploading" class="upload-overlay">
@@ -172,16 +173,11 @@
 
 <script setup>
 /**
- * 首页（v1.7.0 简化版）
+ * 首页（v1.8.0）
  *
- * 功能说明：
- * - 上传简历
- * - 简历列表
- * - 点击"查看简历"跳转到 Preview 页面
- *
- * 变化：
- * - 移除了"详情"和"优化"按钮，统一入口为"查看简历"
- * - 用户在 Preview 页面完成所有操作（预览、优化、导出）
+ * 新增：导航栏显示用户头像
+ * - 有头像时显示头像图片
+ * - 没头像时显示用户名首字母
  */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -194,17 +190,21 @@ import {
   batchDeleteResume,
   renameResume
 } from '@/api/resume'
+// ★ 新增：导入获取用户信息的接口
+import { getUserProfile } from '@/api/user'
 
 const router = useRouter()
 
 // ========== 响应式数据 ==========
 const userName = ref(localStorage.getItem('username') || '用户')
+// ★ 新增：用户头像URL
+const userAvatarUrl = ref('')
 const resumeList = ref([])
 const selectedIds = ref([])
 const pageLoading = ref(false)
 const uploading = ref(false)
 const selectedFile = ref(null)
-const uploadRef = ref(null)  // 新增：上传组件引用
+const uploadRef = ref(null)
 
 // 重命名相关
 const renameDialogVisible = ref(false)
@@ -231,9 +231,31 @@ const optimizeCount = computed(() => resumeList.value.filter(r => r.optimizedStr
 // ========== 生命周期 ==========
 onMounted(() => {
   loadResumeList()
+  // ★ 加载用户头像
+  loadUserProfile()
 })
 
 // ========== 方法 ==========
+
+/**
+ * ★ 新增：加载用户信息（获取头像）
+ */
+const loadUserProfile = async () => {
+  try {
+    const res = await getUserProfile()
+    if (res.code === 200 && res.data) {
+      userAvatarUrl.value = res.data.avatarUrl || ''
+      // 同步更新 localStorage 中的用户名
+      if (res.data.username) {
+        userName.value = res.data.username
+        localStorage.setItem('username', res.data.username)
+      }
+    }
+  } catch (error) {
+    // 获取失败不影响主流程，头像显示首字母就行
+    console.error('获取用户信息失败', error)
+  }
+}
 
 /**
  * 加载简历列表
@@ -425,7 +447,6 @@ const logout = () => {
   router.push('/login')
 }
 
-
 </script>
 
 <style scoped>
@@ -461,6 +482,13 @@ const logout = () => {
 
 .user-avatar {
   cursor: pointer;
+}
+
+/* ★ 头像图片适配 */
+.user-avatar .el-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* ========== 欢迎区域 ========== */
@@ -705,15 +733,14 @@ const logout = () => {
   padding: 16px;
 }
 
-/* 上传动画样式 */
+/* ========== 上传遮罩 ========== */
 .upload-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -723,66 +750,63 @@ const logout = () => {
 .upload-modal {
   background: #fff;
   border-radius: 16px;
-  padding: 48px 64px;
+  padding: 40px 48px;
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  min-width: 320px;
 }
 
 .upload-animation {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .upload-spinner {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   border: 4px solid #e4e7ed;
   border-top-color: #409eff;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
   margin: 0 auto;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .upload-title {
+  margin: 0 0 8px 0;
   font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 8px;
+  color: #333;
 }
 
 .upload-desc {
+  color: #999;
+  margin: 0 0 20px 0;
   font-size: 14px;
-  color: #909399;
-  margin-bottom: 20px;
-  min-height: 20px;
 }
 
 .progress-bar {
-  width: 280px;
   height: 6px;
   background: #e4e7ed;
   border-radius: 3px;
-  margin: 0 auto;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #409eff, #67c23a);
+  background: linear-gradient(90deg, #409eff, #66b1ff);
   border-radius: 3px;
   transition: width 0.3s ease;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
+/* ========== 过渡动画 ========== */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s;
 }
 
-.fade-enter-from,
-.fade-leave-to {
+.fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
 </style>
