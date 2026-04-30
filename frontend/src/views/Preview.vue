@@ -14,13 +14,24 @@
           <el-option :value="3" label="创意橙" />
         </el-select>
 
+        <!-- ★ 显示头像开关（只有用户上传了头像才显示） -->
+        <div class="avatar-switch" v-if="hasUserAvatar">
+          <span class="switch-label">显示头像</span>
+          <el-switch
+              v-model="showAvatarInResume"
+              @change="handleShowAvatarChange"
+              active-text="开"
+              inactive-text="关"
+          />
+        </div>
+
         <!-- 优化按钮（没优化过才显示） -->
         <el-button v-if="!hasOptimized" type="warning" @click="handleOptimize" :loading="optimizing">
           <el-icon><i class="el-icon-magic-stick"></i></el-icon>
           {{ optimizing ? 'AI优化中...' : '优化简历' }}
         </el-button>
 
-        <!-- ★ 新增：查看历史按钮（有优化历史才显示） -->
+        <!-- 查看历史按钮（有优化历史才显示） -->
         <el-button
             v-if="resumeData?.optimizedText"
             @click="goHistory"
@@ -166,7 +177,7 @@
 <script setup>
 /**
  * 简历预览页面（v1.7.0 核心页面）
- * ★ 修改：用JavaScript给HTML注入padding样式
+ * ★ v1.8.0新增：显示头像开关功能
  */
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -177,7 +188,8 @@ import {
   generateHtml,
   exportFromHtml,
   optimizeResume,
-  switchTemplate
+  switchTemplate,
+  toggleShowAvatar
 } from '@/api/resume'
 
 // ========== 路由 ==========
@@ -200,6 +212,10 @@ const optimizedHtml = ref('')
 const currentTemplate = ref(1)
 const showOptimizeDialog = ref(false)
 const targetRole = ref('')
+
+// ★ 头像相关
+const showAvatarInResume = ref(false)  // 是否在简历中显示头像
+const hasUserAvatar = ref(false)       // 用户是否上传了头像
 
 // 优化动画相关
 const optimizeTip = ref('正在分析简历结构...')
@@ -228,12 +244,10 @@ onMounted(async () => {
 
 /**
  * 给HTML内容注入padding样式
- * ★ 核心修改：用JS给HTML的body加左右padding
  */
 const addPaddingToHtml = (html) => {
   if (!html) return ''
 
-  // 如果HTML里还没有我们注入的padding样式，就加上
   if (!html.includes('xy-padding-injected')) {
     const paddingStyle = `
       <style id="xy-padding-injected">
@@ -249,7 +263,6 @@ const addPaddingToHtml = (html) => {
         }
       </style>
     `
-    // 插入到</head>之前
     html = html.replace('</head>', paddingStyle + '</head>')
   }
 
@@ -262,6 +275,20 @@ const loadResume = async () => {
     const res = await getResume(resumeId)
     resumeData.value = res.data || res
     currentTemplate.value = resumeData.value?.templateId || 1
+
+    // ★ 读取简历的头像显示状态
+    showAvatarInResume.value = resumeData.value?.showAvatar === 1
+
+    // ★ 检查用户是否上传了头像（从localStorage读取）
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr)
+        hasUserAvatar.value = !!(user.avatarUrl && user.avatarUrl.trim() !== '')
+      } catch (e) {
+        hasUserAvatar.value = false
+      }
+    }
 
     if (hasOptimized.value) {
       await loadBothVersions()
@@ -400,6 +427,33 @@ const goHistory = () => {
 }
 
 /**
+ * ★ 切换简历中是否显示头像
+ * 切换后后端会清除缓存并重新预生成，前端刷新预览即可
+ */
+const handleShowAvatarChange = async (val) => {
+  try {
+    const res = await toggleShowAvatar(resumeId, val ? 1 : 0)
+    if (res.code === 200) {
+      ElMessage.success(val ? '已开启头像显示' : '已关闭头像显示')
+      // 不需要重新生成，只需要刷新预览（后端会实时注入头像）
+      if (hasOptimized.value) {
+        await loadBothVersions()
+      } else {
+        await generatePreview()
+      }
+    } else {
+      showAvatarInResume.value = !val
+      ElMessage.error(res.message || '设置失败')
+    }
+  } catch (error) {
+    showAvatarInResume.value = !val
+    ElMessage.error('设置失败')
+    console.error('切换头像显示失败:', error)
+  }
+}
+
+
+/**
  * 导出 PDF
  * @param {string} type - 'original' 或 'optimized'
  */
@@ -487,6 +541,22 @@ const goHome = () => {
   gap: 12px;
 }
 
+/* ========== 头像开关样式 ========== */
+.avatar-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-right: 1px solid #e4e7ed;
+  margin-right: 4px;
+}
+
+.switch-label {
+  font-size: 13px;
+  color: #606266;
+  white-space: nowrap;
+}
+
 /* ========== 主内容区 ========== */
 .main-content {
   padding: 20px;
@@ -506,10 +576,9 @@ const goHome = () => {
 
 /* ========== iframe容器 ========== */
 .iframe-container {
-  /* iframe自适应容器宽度 */
   width: 100%;
   min-width: 700px;
-  max-width: 780px;  /* 最多780px，给padding留空间 */
+  max-width: 780px;
   background: #fff;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
@@ -518,9 +587,7 @@ const goHome = () => {
 .preview-iframe {
   border: none;
   display: block;
-  /* iframe宽度100%，由容器决定 */
   width: 100%;
-  /* 高度自适应内容，最小1000px */
   height: 1200px;
   background: #fff;
 }

@@ -15,13 +15,11 @@ public class HtmlToPdfUtil {
             throw new IllegalArgumentException("HTML内容不能为空");
         }
 
-        // 清理 HTML
         xhtmlContent = cleanHtml(xhtmlContent);
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         ITextRenderer renderer = new ITextRenderer();
 
-        // 加载中文字体
         String fontPath = "/fonts/SimSun.ttf";
         InputStream fontStream = getClass().getResourceAsStream(fontPath);
 
@@ -33,7 +31,6 @@ public class HtmlToPdfUtil {
             );
             fontStream.close();
 
-            // ★ 只注入字体，不注入其他样式，避免覆盖HTML原有样式
             if (!xhtmlContent.contains("@font-face")) {
                 String fontStyle =
                         "<style type=\"text/css\">\n" +
@@ -57,21 +54,15 @@ public class HtmlToPdfUtil {
         return outputStream.toByteArray();
     }
 
-    /**
-     * 清理HTML，确保符合XHTML标准
-     */
     private String cleanHtml(String html) {
-        // 确保 DOCTYPE 在最前面
         int doctypeIndex = html.indexOf("<!DOCTYPE");
         if (doctypeIndex > 0) {
             html = html.substring(doctypeIndex);
         }
 
         // 修复自闭合标签
-        html = html.replaceAll("<br\\s*>", "<br/>");
-        html = html.replaceAll("<br\\s+/>", "<br/>");
-        html = html.replaceAll("<hr\\s*>", "<hr/>");
-        html = html.replaceAll("<hr\\s+/>", "<hr/>");
+        html = html.replaceAll("<br\\s*/?\\s*>", "<br/>");
+        html = html.replaceAll("<hr\\s*/?\\s*>", "<hr/>");
         html = html.replaceAll("<img([^>]*)(?<!/)>", "<img$1/>");
         html = html.replaceAll("<input([^>]*)(?<!/)>", "<input$1/>");
 
@@ -79,8 +70,6 @@ public class HtmlToPdfUtil {
         html = html.replaceAll("<div[^>]*>\\s*</div>", "");
         html = html.replaceAll("<table[^>]*>\\s*</table>", "");
         html = html.replaceAll("<td[^>]*>\\s*</td>", "<td></td>");
-
-        // ★ 不再注入任何padding样式！HTML本身已经包含了所有样式
 
         return html;
     }

@@ -4,10 +4,12 @@ package com.resume.airesume.controller;
 import com.resume.airesume.dto.Result;
 import com.resume.airesume.entity.User;
 import com.resume.airesume.mapper.ResumeMapper;
+import com.resume.airesume.service.FileStorageService;
 import com.resume.airesume.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -28,6 +30,9 @@ public class UserController {
 
     @Autowired
     private ResumeMapper resumeMapper;
+
+    @Autowired
+    private FileStorageService fileStorageService;
 
     /**
      * 获取当前登录用户的基本信息
@@ -207,6 +212,8 @@ public class UserController {
         }
     }
 
+
+
     /**
      * 获取用户统计数据
      * 包括：简历数量、优化次数、已用额度、加入天数
@@ -248,6 +255,90 @@ public class UserController {
             return Result.success("获取成功", data);
         } catch (Exception e) {
             return Result.error("获取统计数据失败: " + e.getMessage());
+        }
+    }
+
+
+
+    /**
+     * 上传头像
+     *
+     * 功能说明：
+     * - 用户上传头像图片
+     * - 图片存储到本地磁盘
+     * - 图片路径保存到 user.avatar_url 字段
+     *
+     * @param file    头像图片文件
+     * @param request HTTP请求（获取当前用户ID）
+     * @return 上传结果，包含头像访问路径
+     */
+    @PostMapping("/avatar")
+    public Result<String> uploadAvatar(
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest request) {
+
+        try {
+            // ========== 第一步：获取当前登录用户ID ==========
+            Long userId = (Long) request.getAttribute("userId");
+            if (userId == null) {
+                return Result.error("用户未登录");
+            }
+
+            // ========== 第二步：上传文件 ==========
+            // 调用文件存储服务，返回访问路径
+            String avatarUrl = fileStorageService.uploadAvatar(file, userId);
+
+            // ========== 第三步：删除旧头像（如果有） ==========
+            // 先查询用户当前头像
+            User user = userService.getById(userId);
+            if (user != null && user.getAvatarUrl() != null) {
+                // 删除旧头像文件
+                fileStorageService.deleteAvatar(user.getAvatarUrl());
+            }
+
+            // ========== 第四步：更新数据库 ==========
+            // 将新头像路径保存到数据库
+            userService.updateAvatar(userId, avatarUrl);
+
+            // ========== 第五步：返回结果 ==========
+            return Result.success("头像上传成功", avatarUrl);
+
+        } catch (Exception e) {
+            return Result.error("头像上传失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 删除头像
+     *
+     * @param request HTTP请求（获取当前用户ID）
+     * @return 操作结果
+     */
+    @DeleteMapping("/avatar")
+    public Result<String> deleteAvatar(HttpServletRequest request) {
+        try {
+            // 获取当前用户ID
+            Long userId = (Long) request.getAttribute("userId");
+            if (userId == null) {
+                return Result.error("用户未登录");
+            }
+
+            // 查询用户当前头像
+            User user = userService.getById(userId);
+            if (user == null || user.getAvatarUrl() == null) {
+                return Result.error("用户没有头像");
+            }
+
+            // 删除文件
+            fileStorageService.deleteAvatar(user.getAvatarUrl());
+
+            // 清空数据库中的头像路径
+            userService.updateAvatar(userId, null);
+
+            return Result.success("头像删除成功");
+
+        } catch (Exception e) {
+            return Result.error("删除失败：" + e.getMessage());
         }
     }
 }

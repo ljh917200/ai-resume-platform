@@ -37,4 +37,6 @@ public class Resume {
      * DeepSeek 根据优化后结构化数据生成的 XHTML 格式简历
      */
     private String optimizedHtml;
+    /** 是否在简历中显示头像：0-否 1-是 */
+    private Integer showAvatar;
 }

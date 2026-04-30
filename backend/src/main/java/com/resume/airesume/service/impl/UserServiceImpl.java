@@ -205,22 +205,12 @@ public class UserServiceImpl implements UserService {
 
     /**
      * 更新用户头像
-     * @param id 用户ID
+     * @param userId 用户ID
      * @param avatarUrl 新头像URL
      */
     @Override
-    public void updateAvatar(Long id, String avatarUrl) {
-        // 1. 查询当前用户
-        User user = userMapper.findById(id);
-        if (user == null) {
-            throw new RuntimeException("用户不存在");
-        }
-
-        // 2. 更新头像
-        int rows = userMapper.updateAvatar(id, avatarUrl);
-        if (rows == 0) {
-            throw new RuntimeException("头像更新失败");
-        }
+    public void updateAvatar(Long userId, String avatarUrl) {
+        userMapper.updateAvatar(userId, avatarUrl);
     }
 
     /**
@@ -274,4 +264,7 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("密码加密失败", e);
         }
     }
+
+
+
 }

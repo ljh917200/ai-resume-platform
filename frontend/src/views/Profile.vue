@@ -11,7 +11,8 @@
       <div class="user-info">
         <el-dropdown>
           <div class="user-avatar">
-            <el-avatar :size="40">
+            <!-- 顶部导航栏头像：优先显示用户头像，否则显示用户名首字母 -->
+            <el-avatar :size="40" :src="fullAvatarUrl || undefined">
               {{ profile.username ? profile.username.charAt(0).toUpperCase() : 'U' }}
             </el-avatar>
           </div>
@@ -54,6 +55,74 @@
           <el-icon class="header-icon"><i class="el-icon-user"></i></el-icon>
           <span>个人资料</span>
         </div>
+
+        <!-- ========== 头像上传区域 ========== -->
+        <div class="avatar-section">
+          <div class="avatar-main">
+            <!-- 头像包装器 -->
+            <div class="avatar-wrapper" :class="{ 'avatar-loading': avatarLoading }" @click="toggleAvatarMenu">
+              <el-avatar
+                  :size="100"
+                  :src="fullAvatarUrl || undefined"
+              >
+                {{ profile.username ? profile.username.charAt(0).toUpperCase() : 'U' }}
+              </el-avatar>
+
+              <!-- 悬停遮罩（无头像时不显示） -->
+              <div class="avatar-overlay" v-if="!avatarLoading && profile.avatarUrl">
+                <el-icon><i class="el-icon-camera"></i></el-icon>
+                <span>点击设置</span>
+              </div>
+
+              <!-- 上传中遮罩 -->
+              <div class="avatar-overlay uploading" v-if="avatarLoading">
+                <el-icon class="is-loading"><i class="el-icon-loading"></i></el-icon>
+                <span>上传中...</span>
+              </div>
+
+              <!-- 自定义下拉菜单 -->
+              <div v-if="showAvatarMenu" class="avatar-dropdown">
+                <div class="avatar-dropdown-item" @click.stop="handlePreviewAvatar">
+                  <el-icon><i class="el-icon-view"></i></el-icon>
+                  <span>查看大图</span>
+                </div>
+                <div class="avatar-dropdown-item" @click.stop="triggerUpload">
+                  <el-icon><i class="el-icon-camera"></i></el-icon>
+                  <span>更换头像</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 头像操作区：提示 + 删除按钮 -->
+          <div class="avatar-tips">
+            <p>支持 jpg、png 格式，大小不超过 2MB</p>
+            <div class="avatar-actions">
+              <el-button
+                  v-if="profile.avatarUrl"
+                  type="danger"
+                  text
+                  size="small"
+                  @click="handleDeleteAvatar"
+                  :loading="avatarLoading"
+              >
+                <el-icon><i class="el-icon-delete"></i></el-icon>
+                <span>删除头像</span>
+              </el-button>
+            </div>
+          </div>
+
+          <!-- 隐藏的文件输入 -->
+          <input
+              ref="avatarInputRef"
+              type="file"
+              accept="image/jpeg,image/png"
+              style="display: none"
+              @change="handleAvatarChange"
+          />
+        </div>
+        <!-- ========== 头像区域结束 ========== -->
+
         <el-form
             ref="profileFormRef"
             :model="profileForm"
@@ -143,6 +212,14 @@
         </el-form>
       </div>
     </div>
+
+    <!-- 大图预览（放在最外层，确保覆盖所有内容，不被遮挡） -->
+    <el-image-viewer
+        v-if="showPreview"
+        :url-list="[fullAvatarUrl]"
+        :z-index="9999"
+        @close="showPreview = false"
+    />
   </div>
 </template>
 
@@ -151,13 +228,14 @@
  * 个人中心页面组件
  * 功能包括：
  * 1. 显示用户基本信息（ID、用户名、邮箱、注册时间）
- * 2. 修改用户名
- * 3. 修改邮箱
- * 4. 修改密码（需验证原密码）
- * 5. 显示统计数据（简历数量、优化次数、已用额度、加入天数）
+ * 2. 头像上传、预览和删除
+ * 3. 修改用户名
+ * 4. 修改邮箱
+ * 5. 修改密码（需验证原密码）
+ * 6. 显示统计数据（简历数量、优化次数、已用额度、加入天数）
  */
 
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -167,8 +245,15 @@ import {
   updateUsername,
   updateEmail,
   updatePassword,
-  getUserStatistics
+  getUserStatistics,
+  uploadAvatar,
+  deleteAvatar
 } from '../api/user'
+
+// ==================== 常量定义 ====================
+
+// API基础地址（用于拼接头像完整URL）
+const API_BASE_URL = 'http://localhost:8080'
 
 // ==================== 响应式数据定义 ====================
 
@@ -178,6 +263,8 @@ const router = useRouter()
 const profileFormRef = ref(null)
 // 密码表单引用
 const passwordFormRef = ref(null)
+// 头像上传Input引用
+const avatarInputRef = ref(null)
 
 // 用户基本信息
 const profile = ref({
@@ -214,6 +301,28 @@ const passwordForm = reactive({
 const usernameLoading = ref(false)
 const emailLoading = ref(false)
 const passwordLoading = ref(false)
+const avatarLoading = ref(false)
+
+// 头像菜单显示状态
+const showAvatarMenu = ref(false)
+// 大图预览显示状态
+const showPreview = ref(false)
+
+// ==================== 计算属性 ====================
+
+/**
+ * 计算属性：完整的头像URL
+ * 用于拼接API_BASE_URL与相对路径，组成可访问的完整图片地址
+ */
+const fullAvatarUrl = computed(() => {
+  if (!profile.value.avatarUrl) return ''
+  // 如果已经是完整URL（http开头），直接返回
+  if (profile.value.avatarUrl.startsWith('http')) {
+    return profile.value.avatarUrl
+  }
+  // 否则拼接API_BASE_URL
+  return `${API_BASE_URL}${profile.value.avatarUrl}`
+})
 
 // ==================== 表单验证规则 ====================
 
@@ -289,8 +398,17 @@ const passwordRules = {
  * 组件挂载时获取用户数据和统计数据
  */
 onMounted(() => {
+  // 添加点击监听，关闭菜单
+  document.addEventListener('click', closeAvatarMenu)
   fetchUserProfile()
   fetchStatistics()
+})
+
+/**
+ * 组件卸载时清理
+ */
+onUnmounted(() => {
+  document.removeEventListener('click', closeAvatarMenu)
 })
 
 // ==================== 数据获取方法 ====================
@@ -330,6 +448,153 @@ const fetchStatistics = async () => {
   } catch (error) {
     console.error('获取统计数据失败:', error)
     ElMessage.error('获取统计数据失败')
+  }
+}
+
+// ==================== 头像相关方法 ====================
+
+/**
+ * 切换头像菜单显示状态
+ */
+const toggleAvatarMenu = () => {
+  // 如果正在上传，禁止操作
+  if (avatarLoading.value) return
+  showAvatarMenu.value = !showAvatarMenu.value
+}
+
+/**
+ * 点击其他地方关闭头像菜单
+ */
+const closeAvatarMenu = (e) => {
+  if (!e.target.closest('.avatar-wrapper')) {
+    showAvatarMenu.value = false
+  }
+}
+
+/**
+ * 预览头像（大图查看）
+ * 使用 nextTick 延迟显示，避免事件穿透导致闪烁
+ */
+const handlePreviewAvatar = () => {
+  if (!profile.value.avatarUrl) {
+    ElMessage.warning('暂无头像可预览')
+    return
+  }
+  // 关闭菜单
+  showAvatarMenu.value = false
+  // 延迟显示预览，避免鼠标事件穿透导致闪烁
+  nextTick(() => {
+    showPreview.value = true
+  })
+}
+
+/**
+ * 触发文件选择（更换头像）
+ */
+const triggerUpload = () => {
+  // 如果正在上传，禁止重复点击
+  if (avatarLoading.value) return
+  // 关闭菜单
+  showAvatarMenu.value = false
+  // 触发隐藏的input点击事件
+  avatarInputRef.value?.click()
+}
+
+/**
+ * 处理头像文件选择
+ *
+ * @param {Event} event - 文件选择事件
+ */
+const handleAvatarChange = async (event) => {
+  // 获取选中的文件
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  // ========== 前端验证 ==========
+  // 1. 验证文件类型
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg']
+  if (!allowedTypes.includes(file.type)) {
+    ElMessage.error('只支持 jpg、png 格式的图片')
+    // 清空input，允许重复选择同一文件
+    event.target.value = ''
+    return
+  }
+
+  // 2. 验证文件大小（2MB）
+  const maxSize = 2 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.error('图片大小不能超过 2MB')
+    event.target.value = ''
+    return
+  }
+
+  // ========== 上传头像 ==========
+  avatarLoading.value = true
+
+  try {
+    const res = await uploadAvatar(file)
+
+    if (res.code === 200) {
+      ElMessage.success('头像上传成功')
+      // 更新本地头像URL
+      profile.value.avatarUrl = res.data
+      // 更新localStorage中的用户信息
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      user.avatarUrl = res.data
+      localStorage.setItem('user', JSON.stringify(user))
+    } else {
+      ElMessage.error(res.message || '头像上传失败')
+    }
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    ElMessage.error('头像上传失败，请稍后重试')
+  } finally {
+    avatarLoading.value = false
+    // 清空input，允许重复选择同一文件
+    event.target.value = ''
+  }
+}
+
+/**
+ * 删除头像
+ */
+const handleDeleteAvatar = async () => {
+  // 二次确认
+  try {
+    await ElMessageBox.confirm(
+        '确定要删除头像吗？',
+        '确认删除',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+    )
+  } catch {
+    return
+  }
+
+  avatarLoading.value = true
+
+  try {
+    const res = await deleteAvatar()
+
+    if (res.code === 200) {
+      ElMessage.success('头像已删除')
+      // 清空本地头像URL
+      profile.value.avatarUrl = null
+      // 更新localStorage
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      delete user.avatarUrl
+      localStorage.setItem('user', JSON.stringify(user))
+    } else {
+      ElMessage.error(res.message || '删除失败')
+    }
+  } catch (error) {
+    console.error('删除头像失败:', error)
+    ElMessage.error('删除失败，请稍后重试')
+  } finally {
+    avatarLoading.value = false
   }
 }
 
@@ -447,10 +712,7 @@ const handleUpdatePassword = async () => {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       // 跳转登录页
-      router.push('/login')//修改密码后应该让用户重新登录，这是安全最佳实践：
-      // Token 可能是基于密码生成的，密码变了 token 可能失效
-      // 强制重新登录可以确保密码修改成功后用户用新密码登录
-      // 防止旧 token 被滥用
+      router.push('/login')
       // 清空密码表单
       resetPasswordForm()
     } else {
@@ -640,6 +902,162 @@ const logout = () => {
   color: #764ba2;
 }
 
+/* ========== 头像上传区域样式 ========== */
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px 0;
+}
+
+.avatar-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 头像包装器 */
+.avatar-wrapper {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.avatar-wrapper:hover {
+  transform: scale(1.05);
+}
+
+/* 悬停遮罩 */
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.avatar-wrapper:hover .avatar-overlay {
+  opacity: 1;
+}
+
+/* 上传中状态 */
+.avatar-overlay.uploading {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.avatar-overlay .el-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.avatar-overlay span {
+  font-size: 12px;
+}
+
+/* 头像加载状态 */
+.avatar-loading .el-avatar {
+  opacity: 0.6;
+}
+
+/* ========== 自定义下拉菜单样式 ========== */
+.avatar-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 6px 0;
+  min-width: 140px;
+  z-index: 1000;
+}
+
+.avatar-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid #fff;
+}
+
+.avatar-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #606266;
+  font-size: 14px;
+}
+
+.avatar-dropdown-item:hover {
+  background: #f5f7fa;
+  color: #667eea;
+}
+
+.avatar-dropdown-item .el-icon {
+  font-size: 16px;
+}
+
+/* ========== 头像提示区域样式 ========== */
+.avatar-tips {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.avatar-tips p {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.avatar-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* 删除按钮样式优化 */
+.avatar-actions .el-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.avatar-actions .el-button:hover {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+
+.avatar-actions .el-button .el-icon {
+  font-size: 14px;
+}
+
+.avatar-actions .el-button span {
+  font-size: 12px;
+}
+
+/* ========== 头像区域样式结束 ========== */
+
 .profile-form,
 .password-form {
   padding: 0;
@@ -668,35 +1086,18 @@ const logout = () => {
   background: linear-gradient(135deg, #764ba2, #667eea);
 }
 
-/* 响应式设计 */
+/* 响应式布局 */
 @media (max-width: 768px) {
-  .top-nav {
-    padding: 0 20px;
+  .stats-container {
+    flex-wrap: wrap;
+  }
+
+  .stat-card {
+    flex: 1 1 45%;
   }
 
   .main-content {
-    padding: 20px;
-  }
-
-  .stats-section {
-    padding: 30px 20px;
-  }
-
-  .stats-container {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .nav-left {
-    gap: 8px;
-  }
-
-  .page-title {
-    font-size: 18px;
-  }
-
-  .form-card {
-    padding: 20px;
+    padding: 15px;
   }
 }
 </style>

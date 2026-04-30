@@ -72,4 +72,8 @@ public interface ResumeService {
      */
     void updateHtmlAndTemplate(Long id, Long userId, String htmlField, String htmlContent, Integer templateId);
 
+
+
+
+
 }

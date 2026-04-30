@@ -11,6 +11,14 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 异步预生成服务
+ * 作用：在简历上传或优化后，后台静默生成三个模板的HTML
+ * 用户点预览时可以直接从缓存读取，秒返回
+ *
+ * 优化策略：只缓存纯HTML（不含头像），头像在请求时实时注入
+ * 这样切换头像不需要清缓存和重新生成，加载速度大幅提升
+ */
 @Service
 public class PreGenerateService {
 
@@ -20,10 +28,13 @@ public class PreGenerateService {
     @Autowired
     private DeepSeekService deepSeekService;
 
+    // 不再需要 UserMapper 和 AvatarUtil
+    // 头像由 ResumeController 在返回前实时注入，预生成只管纯HTML
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 异步预生成三个模板的HTML
+     * 异步预生成三个模板的HTML（纯HTML，不含头像）
      *
      * @param resumeId 简历ID
      * @param userId 用户ID
@@ -38,10 +49,10 @@ public class PreGenerateService {
             try {
                 System.out.println("[预生成] 正在生成模板 " + templateId + "...");
 
+                // 只调用AI生成纯HTML，不注入头像
                 String htmlContent = deepSeekService.generateResumeHtml(structuredData, templateId);
 
                 if (htmlContent != null && !htmlContent.isEmpty()) {
-                    // ★ 改动：每生成一个模板，立即保存到数据库
                     saveSingleTemplate(resumeId, userId, templateId, htmlContent, type);
                     System.out.println("[预生成] 模板 " + templateId + " 生成并保存成功");
                 } else {
@@ -77,7 +88,7 @@ public class PreGenerateService {
                 }
             }
 
-            // 3. 添加新生成的模板
+            // 3. 添加新生成的模板（纯HTML，不含头像）
             htmlMap.put(String.valueOf(templateId), htmlContent);
 
             // 4. 保存回数据库

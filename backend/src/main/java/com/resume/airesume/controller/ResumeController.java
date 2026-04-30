@@ -3,6 +3,8 @@ package com.resume.airesume.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resume.airesume.dto.Result;
 import com.resume.airesume.entity.Resume;
+import com.resume.airesume.mapper.ResumeMapper;
+import com.resume.airesume.mapper.UserMapper;
 import com.resume.airesume.service.DeepSeekService;
 import com.resume.airesume.service.OptimizeHistoryService;
 import com.resume.airesume.service.PreGenerateService;
@@ -50,6 +52,18 @@ public class ResumeController {
     @Autowired
     private PreGenerateService preGenerateService;  // 新增注入
 
+    @Autowired
+    private ResumeMapper resumeMapper;
+
+    @Autowired
+    private UserMapper userMapper;
+
+    // 服务器基础地址（用于拼接头像完整URL）
+    @org.springframework.beans.factory.annotation.Value("${server.base-url:http://localhost:8080}")
+    private String serverBaseUrl;
+
+    @Autowired
+    private com.resume.airesume.util.AvatarUtil avatarUtil;
 
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -480,12 +494,14 @@ public class ResumeController {
 
 
     /**
-     * 生成简历HTML（v1.7.0优化版）
+     * 生成简历HTML（v1.8.0优化版）
      *
      * 功能说明：
      * - 调用 DeepSeek 根据结构化数据生成 XHTML 格式的简历
      * - 使用JSON存储所有模板的HTML，切换模板时缓存命中秒返回
      * - 懒加载：只有用户选择的模板才生成，节省AI调用成本
+     * - ★ v1.8.0优化：缓存只存纯HTML（不含头像），头像在返回前实时注入
+     *   这样切换头像不需要清缓存和重新生成，加载速度大幅提升
      *
      * @param id 简历ID
      * @param type 类型：original-原始版，optimized-优化版
@@ -542,18 +558,14 @@ public class ResumeController {
             Map<String, String> htmlMap = new HashMap<>();
             if (htmlJson != null && !htmlJson.isEmpty()) {
                 try {
-                    // 尝试解析JSON
                     Map<String, String> parsedMap = objectMapper.readValue(htmlJson, Map.class);
                     htmlMap.putAll(parsedMap);
                 } catch (Exception e) {
                     // JSON解析失败，可能是旧数据格式（单个HTML字符串）
-                    // 检查是否以 <!DOCTYPE 开头（旧格式：单个HTML字符串）
                     if (htmlJson.trim().startsWith("<!DOCTYPE")) {
-                        // 旧格式：单个HTML字符串，尝试保留
                         htmlMap.put("1", htmlJson);  // 默认存为模板1
                         System.out.println("[缓存] 检测到旧格式HTML，已迁移到模板1");
                     } else {
-                        // 其他异常格式，重新生成
                         System.out.println("[缓存] HTML格式异常，将重新生成：" + e.getMessage());
                     }
                 }
@@ -566,12 +578,14 @@ public class ResumeController {
             boolean needGenerate = (htmlContent == null || htmlContent.isEmpty());
 
             if (needGenerate) {
-                // 需要生成：调用 DeepSeek
+                // 需要生成：调用 DeepSeek（2个参数，不含头像）
+                // ★ 缓存只存纯HTML，头像在返回前实时注入
                 htmlContent = deepSeekService.generateResumeHtml(structuredData, templateId);
                 if (htmlContent == null || htmlContent.isEmpty()) {
                     return Result.error("HTML生成失败，请稍后重试");
                 }
 
+                // ★ 不在这里注入头像！缓存存纯HTML
                 // 更新缓存Map
                 htmlMap.put(targetKey, htmlContent);
 
@@ -589,10 +603,20 @@ public class ResumeController {
                 resumeService.switchTemplate(id, userId, templateId);
             }
 
-            // 7. 返回结果
+            // 7. ★ 返回前实时注入头像（只是字符串操作，毫秒级）
+            String htmlToReturn = htmlContent;
+            if (resume.getShowAvatar() != null && resume.getShowAvatar() == 1) {
+                // 先查询用户头像URL
+                com.resume.airesume.entity.User user = userMapper.findById(userId);
+                if (user != null && user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+                    htmlToReturn = avatarUtil.injectAvatar(htmlContent, user.getAvatarUrl(), structuredData);
+                }
+            }
+
+            // 8. 返回结果
             Map<String, Object> data = new HashMap<>();
             data.put("id", id);
-            data.put("htmlContent", htmlContent);
+            data.put("htmlContent", htmlToReturn);  // 返回的是注入头像后的HTML
             data.put("type", type);
             data.put("templateId", templateId);
             data.put("fromCache", !needGenerate);
@@ -606,7 +630,8 @@ public class ResumeController {
     }
 
     /**
-     * 从HTML导出PDF（v1.7.0）
+     * 从HTML导出PDF（v1.8.0优化版）
+     * ★ 优化：从缓存读取纯HTML，导出前实时注入头像，再转PDF
      */
     @PostMapping("/export-from-html")
     public void exportFromHtml(
@@ -642,7 +667,7 @@ public class ResumeController {
                 templateId = resume.getTemplateId() != null ? resume.getTemplateId() : 1;
             }
 
-            // 4. 获取对应的 HTML JSON
+            // 4. 获取对应的 HTML JSON（纯HTML缓存，不含头像）
             String htmlJson;
             String fileTitle;
 
@@ -664,7 +689,7 @@ public class ResumeController {
                 }
             }
 
-            // 5. 从JSON中提取目标模板的HTML
+            // 5. 从JSON中提取目标模板的纯HTML
             String htmlContent;
             try {
                 Map<String, String> htmlMap = objectMapper.readValue(htmlJson, Map.class);
@@ -679,21 +704,33 @@ public class ResumeController {
                 htmlContent = htmlJson;
             }
 
-            // 6. 使用 Flying Saucer 将 HTML 转换为 PDF
+            // 6. ★ 导出前实时注入头像（不影响缓存，只是字符串操作）
+            if (resume.getShowAvatar() != null && resume.getShowAvatar() == 1) {
+                // 先查询用户头像URL
+                com.resume.airesume.entity.User user = userMapper.findById(userId);
+                if (user != null && user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+                    String structuredData = "optimized".equals(type)
+                            ? resume.getOptimizedStructuredData()
+                            : resume.getStructuredData();
+                    htmlContent = avatarUtil.injectAvatar(htmlContent, user.getAvatarUrl(), structuredData);
+                }
+            }
+
+            // 7. 使用 Flying Saucer 将 HTML 转换为 PDF
             byte[] pdfBytes = htmlToPdfUtil.convertToPdf(htmlContent);
 
-            // 7. 生成文件名
+            // 8. 生成文件名
             String date = java.time.LocalDate.now().toString().replace("-", "");
             String templateName = getTemplateName(templateId);
             String fileName = fileTitle + "_" + templateName + "_" + date + ".pdf";
 
-            // 8. 设置响应头
+            // 9. 设置响应头
             response.setContentType("application/pdf");
             response.setCharacterEncoding("UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=" + new String(fileName.getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1));
             response.setContentLength(pdfBytes.length);
 
-            // 9. 将 PDF 写入响应流
+            // 10. 将 PDF 写入响应流
             try (java.io.OutputStream outputStream = response.getOutputStream()) {
                 outputStream.write(pdfBytes);
                 outputStream.flush();
@@ -721,4 +758,49 @@ public class ResumeController {
             default: return "简约蓝";
         }
     }
+
+    /**
+     * 切换简历是否显示头像（v1.8.0优化版）
+     * ★ 优化策略：只更新数据库字段，不需要清缓存和重新预生成
+     * 因为缓存存的是纯HTML（不含头像），头像在请求时实时注入
+     *
+     * @param id 简历ID
+     * @param params 包含 showAvatar 字段（0-不显示 1-显示）
+     * @param request HTTP请求对象
+     * @return 设置结果
+     */
+    @PutMapping("/{id}/show-avatar")
+    public Result<String> toggleShowAvatar(
+            @PathVariable Long id,
+            @RequestBody Map<String, Integer> params,
+            HttpServletRequest request) {
+        try {
+            // 1. 获取当前登录用户ID
+            Long userId = (Long) request.getAttribute("userId");
+            if (userId == null) {
+                return Result.error("用户未登录");
+            }
+
+            // 2. 获取参数
+            Integer showAvatar = params.get("showAvatar");
+            if (showAvatar == null || (showAvatar != 0 && showAvatar != 1)) {
+                return Result.error("参数错误，showAvatar只能为0或1");
+            }
+
+            // 3. 验证简历归属
+            Resume resume = resumeService.getById(id, userId);
+            if (resume == null) {
+                return Result.error("简历不存在");
+            }
+
+            // 4. 只更新数据库字段（不需要清缓存，不需要重新预生成）
+            resumeMapper.updateShowAvatar(id, showAvatar);
+
+            return Result.success("设置成功", null);
+        } catch (Exception e) {
+            return Result.error("设置失败: " + e.getMessage());
+        }
+    }
+
+
 }

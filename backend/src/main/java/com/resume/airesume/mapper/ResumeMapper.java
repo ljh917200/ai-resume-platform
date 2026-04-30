@@ -124,4 +124,15 @@ public interface ResumeMapper {
                               @Param("htmlField") String htmlField,
                               @Param("htmlContent") String htmlContent,
                               @Param("templateId") Integer templateId);
+
+
+    /**
+     * 更新简历是否显示头像
+     * @param id 简历ID
+     * @param showAvatar 0-不显示 1-显示
+     */
+    @Update("UPDATE resume SET show_avatar = #{showAvatar} WHERE id = #{id}")
+    void updateShowAvatar(@Param("id") Long id, @Param("showAvatar") Integer showAvatar);
+
+
 }

@@ -78,12 +78,14 @@ public interface UserService {
      */
     void updatePassword(Long id, String oldPassword, String newPassword);
 
+
     /**
      * 更新用户头像
-     * @param id 用户ID
-     * @param avatarUrl 新头像URL
+     *
+     * @param userId    用户ID
+     * @param avatarUrl 头像路径
      */
-    void updateAvatar(Long id, String avatarUrl);
+    void updateAvatar(Long userId, String avatarUrl);
 
     /**
      * 获取用户简历数量
@@ -98,4 +100,8 @@ public interface UserService {
      * @param increment 增加量
      */
     void incrementQuotaUsed(Long userId, Integer increment);
+
+
+
+
 }

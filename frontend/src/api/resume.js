@@ -75,24 +75,22 @@ export function switchTemplate(resumeId, templateId) {
 }
 
 /**
- * 生成简历HTML（v1.7.0新增）
- *
- * 功能说明：
- * - 调用后端接口，让 DeepSeek 生成 XHTML 格式的简历
- * - 返回 HTML 内容供前端 iframe 预览
+ * 生成简历HTML（v1.7.0新增，支持头像）
  *
  * @param {number} id - 简历ID
  * @param {string} type - 类型：'original'-原始版，'optimized'-优化版
- * @param {number} templateId - 模板ID：1-简约蓝 2-商务灰 3-创意橙
- * @returns {Promise} 返回HTML内容
+ * @param {number} templateId - 模板ID
+ * @param {boolean} showAvatar - 是否显示头像（★ 新增）
+ * @returns {Promise}
  */
-export const generateHtml = (id, type, templateId) => {
+export const generateHtml = (id, type, templateId, showAvatar) => {
     return request({
         url: '/resume/generate-html',
         method: 'post',
-        params: {id, type, templateId}
+        params: {id, type, templateId, showAvatar}
     })
 }
+
 
 /**
  * 从HTML导出PDF（v1.7.0新增）
@@ -115,3 +113,16 @@ export const exportFromHtml = (id, type, templateId) => {
         responseType: 'blob'
     })
 }
+/**
+ * 切换简历是否显示头像
+ * @param {number} resumeId 简历ID
+ * @param {number} showAvatar 0-不显示 1-显示
+ */
+export function toggleShowAvatar(resumeId, showAvatar) {
+    return request({
+        url: `/resume/${resumeId}/show-avatar`,
+        method: 'put',
+        data: { showAvatar }
+    })
+}
+

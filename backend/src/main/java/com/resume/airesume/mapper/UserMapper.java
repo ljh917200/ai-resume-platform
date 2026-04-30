@@ -91,13 +91,13 @@ public interface UserMapper {
     int updatePassword(@Param("id") Long id, @Param("passwordHash") String passwordHash);
 
     /**
-     * 更新用户头像URL
-     * @param id 用户ID
-     * @param avatarUrl 新头像URL
-     * @return 影响行数
+     * 更新用户头像
+     *
+     * @param userId    用户ID
+     * @param avatarUrl 头像路径
      */
-    @Update("UPDATE user SET avatar_url = #{avatarUrl} WHERE id = #{id}")
-    int updateAvatar(@Param("id") Long id, @Param("avatarUrl") String avatarUrl);
+    @Update("UPDATE user SET avatar_url = #{avatarUrl} WHERE id = #{userId}")
+    void updateAvatar(@Param("userId") Long userId, @Param("avatarUrl") String avatarUrl);
 
     /**
      * 更新用户配额使用量
@@ -116,4 +116,7 @@ public interface UserMapper {
      */
     @Update("UPDATE user SET quota_used = quota_used + #{increment} WHERE id = #{id}")
     int incrementQuotaUsed(@Param("id") Long id, @Param("increment") Integer increment);
+
+
+
 }

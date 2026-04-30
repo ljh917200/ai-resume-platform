@@ -209,4 +209,6 @@ public class ResumeServiceImpl implements ResumeService {
         resumeMapper.updateHtmlAndTemplate(id, userId, htmlField, htmlContent, templateId);
     }
 
+
+
 }

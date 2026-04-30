@@ -50,3 +50,33 @@ export function updatePassword(oldPassword, newPassword) {
 export function getUserStatistics() {
     return request.get('/user/statistics')
 }
+
+/**
+ * 上传头像
+ * @param {File} file - 头像图片文件
+ * @returns {Promise}
+ */
+export function uploadAvatar(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    return request({
+        url: '/user/avatar',
+        method: 'post',
+        data: formData,
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    })
+}
+
+/**
+ * 删除头像
+ * @returns {Promise}
+ */
+export function deleteAvatar() {
+    return request({
+        url: '/user/avatar',
+        method: 'delete'
+    })
+}
