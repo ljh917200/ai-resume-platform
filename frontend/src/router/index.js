@@ -1,74 +1,128 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 /**
- * 路由配置（v1.7.0 简化版）
+ * 路由配置（v2.0 AI求职助手平台）
  *
- * 变化：
- * - 移除了 Detail.vue 和 Optimize.vue 的路由
- * - Preview.vue 成为核心页面
- * - 用户流程：首页 → 预览页（预览+优化+导出一体化）
+ * 结构：
+ * - 登录/注册页面：独立，无导航栏
+ * - 其他所有页面：嵌套在 MainLayout 下，共享顶部Tab导航
+ * - 根路径重定向到 /dashboard
  */
+
+const routes = [
+  {
+    path: '/',
+    redirect: '/dashboard'
+  },
+  // ====== 独立页面（无导航栏） ======
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/Register.vue'),
+    meta: { requiresAuth: false }
+  },
+  // ====== 主页面（共享Layout导航） ======
+  {
+    path: '/',
+    component: () => import('../components/layout/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      // 首页导航中心
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { requiresAuth: true, title: '首页' }
+      },
+      // 投递看板
+      {
+        path: 'application/list',
+        name: 'ApplicationList',
+        component: () => import('../views/application/ApplicationList.vue'),
+        meta: { requiresAuth: true, title: '投递列表' }
+      },
+      {
+        path: 'application/board',
+        name: 'ApplicationBoard',
+        component: () => import('../views/application/ApplicationBoard.vue'),
+        meta: { requiresAuth: true, title: '投递看板' }
+      },
+      // AI岗位匹配（占位）
+      {
+        path: 'job-match',
+        name: 'JobMatch',
+        component: () => import('../views/jobMatch/JobMatch.vue'),
+        meta: { requiresAuth: true, title: 'AI岗位匹配' }
+      },
+      // AI面试助手（占位）
+      {
+        path: 'interview',
+        name: 'InterviewHome',
+        component: () => import('../views/interview/InterviewHome.vue'),
+        meta: { requiresAuth: true, title: 'AI面试助手' }
+      },
+      // AI求职信（占位）
+      {
+        path: 'cover-letter',
+        name: 'CoverLetterList',
+        component: () => import('../views/coverLetter/CoverLetterList.vue'),
+        meta: { requiresAuth: true, title: 'AI求职信' }
+      },
+      // 简历相关页面（原有）
+      {
+        path: 'home',
+        name: 'Home',
+        component: () => import('../views/Home.vue'),
+        meta: { requiresAuth: true, title: '简历管理' }
+      },
+      {
+        path: 'preview/:id',
+        name: 'Preview',
+        component: () => import('../views/Preview.vue'),
+        meta: { requiresAuth: true, title: '简历预览' }
+      },
+      {
+        path: 'history/:resumeId',
+        name: 'OptimizeHistory',
+        component: () => import('../views/History.vue'),
+        meta: { requiresAuth: true, title: '优化历史' }
+      },
+      // 个人中心
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('../views/Profile.vue'),
+        meta: { requiresAuth: true, title: '个人中心' }
+      }
+    ]
+  }
+]
+
 const router = createRouter({
   history: createWebHistory(),
-  routes: [
-    {
-      path: '/',
-      redirect: '/home'
-    },
-    {
-      path: '/login',
-      name: 'Login',
-      component: () => import('../views/Login.vue')
-    },
-    {
-      path: '/register',
-      name: 'Register',
-      component: () => import('../views/Register.vue')
-    },
-    {
-      path: '/home',
-      name: 'Home',
-      component: () => import('../views/Home.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/preview/:id',
-      name: 'Preview',
-      component: () => import('../views/Preview.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/profile',
-      name: 'Profile',
-      component: () => import('../views/Profile.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/history/:resumeId',
-      name: 'OptimizeHistory',
-      component: () => import('../views/History.vue'),
-      meta: { requiresAuth: true }
-    }
-  ]
+  routes
 })
 
-// 路由守卫
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-
-  // 访问登录/注册页时，如果已登录则跳首页
-  if ((to.path === '/login' || to.path === '/register') && token) {
-    next('/home')
-    return
+// 路由守卫：未登录跳转登录页
+router.beforeEach((to, from) => {
+  // 设置页面标题
+  if (to.meta.title) {
+    document.title = `${to.meta.title} - AI求职助手`
   }
 
-  // 需要登录的页面，没token则跳登录页
-  if (to.meta.requiresAuth && !token) {
-    next('/login')
-    return
+  // 权限校验
+  if (to.meta.requiresAuth) {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      return { name: 'Login', query: { redirect: to.fullPath } }
+    }
   }
-
-  next()
 })
 
 export default router

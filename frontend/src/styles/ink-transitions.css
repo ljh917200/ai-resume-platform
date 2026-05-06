@@ -1,0 +1,399 @@
+/* ========== 全局微交互动效 ========== */
+
+/* ========== 基础过渡曲线 ========== */
+:root {
+  --ink-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ink-ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ========== 平滑滚动 ========== */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ========== 1. 按钮交互 ========== */
+.btn-ink {
+  position: relative;
+  overflow: hidden;
+  transition: background-color 150ms var(--ink-ease);
+}
+
+.btn-ink:hover {
+  filter: brightness(0.95);
+}
+
+.btn-ink:active {
+  transform: scale(0.97);
+  transition: transform 100ms var(--ink-ease);
+}
+
+.btn-primary-ink {
+  position: relative;
+  overflow: hidden;
+  transition: background-color 150ms var(--ink-ease);
+}
+
+.btn-primary-ink:hover {
+  background-color: #151525 !important;
+}
+
+.btn-primary-ink:active {
+  transform: scale(0.97);
+  transition: transform 100ms var(--ink-ease);
+}
+
+.btn-outline-ink {
+  position: relative;
+  overflow: hidden;
+  transition: all 150ms var(--ink-ease);
+}
+
+.btn-outline-ink:hover {
+  background-color: rgba(26, 26, 46, 0.05);
+}
+
+.btn-outline-ink:active {
+  transform: scale(0.97);
+  transition: transform 100ms var(--ink-ease);
+}
+
+/* 涟漪效果容器 */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ========== 2. 卡片交互 ========== */
+.ink-card {
+  transition: transform 300ms var(--ink-ease), box-shadow 300ms var(--ink-ease);
+}
+
+.ink-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(26, 26, 46, 0.12);
+}
+
+.ink-card:active {
+  transform: scale(0.99);
+  transition: transform 100ms var(--ink-ease);
+}
+
+.ink-card .card-action {
+  color: #999;
+  transition: color 200ms var(--ink-ease);
+}
+
+.ink-card .card-action:hover {
+  color: #1a1a2e;
+}
+
+/* ========== 3. 列表项交互 ========== */
+.table-row-ink {
+  transition: background-color 300ms var(--ink-ease);
+}
+
+.table-row-ink:hover {
+  background-color: rgba(26, 26, 46, 0.03);
+}
+
+.list-item-delete {
+  transition: all 400ms var(--ink-ease-out);
+  overflow: hidden;
+}
+
+.list-item-delete.deleting {
+  transform: translateX(-100%);
+  height: 0;
+  opacity: 0;
+}
+
+.list-item-add {
+  animation: listItemAdd 300ms var(--ink-ease) both;
+}
+
+@keyframes listItemAdd {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========== 4. 弹窗交互 ========== */
+.dialog-overlay-ink {
+  background: rgba(26, 26, 46, 0.5);
+  backdrop-filter: blur(0);
+  transition: backdrop-filter 300ms var(--ink-ease), opacity 150ms var(--ink-ease);
+}
+
+.dialog-overlay-ink.visible {
+  backdrop-filter: blur(4px);
+}
+
+.dialog-content-ink {
+  transform: scale(0.95);
+  opacity: 0;
+  transition: transform 300ms var(--ink-ease), opacity 300ms var(--ink-ease);
+}
+
+.dialog-content-ink.visible {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.dialog-overlay-ink.closing {
+  opacity: 0;
+}
+
+.dialog-content-ink.closing {
+  transform: scale(0.97);
+  opacity: 0;
+}
+
+.dialog-overlay-ink.mask-flash {
+  animation: maskFlash 200ms var(--ink-ease);
+}
+
+@keyframes maskFlash {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.3; }
+}
+
+/* ========== 5. 下拉菜单 ========== */
+.dropdown-menu-ink {
+  transform-origin: top;
+  transform: scaleY(0.9);
+  opacity: 0;
+  transition: transform 200ms var(--ink-ease), opacity 200ms var(--ink-ease);
+}
+
+.dropdown-menu-ink.visible {
+  transform: scaleY(1);
+  opacity: 1;
+}
+
+.dropdown-item-ink {
+  transition: background-color 150ms var(--ink-ease);
+}
+
+.dropdown-item-ink:hover {
+  background-color: rgba(26, 26, 46, 0.06);
+}
+
+/* ========== 6. 输入框交互 ========== */
+.input-wrapper-ink {
+  position: relative;
+  transition: all 300ms var(--ink-ease);
+}
+
+.input-wrapper-ink:focus-within {
+  border-color: #1a1a2e !important;
+  box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.08);
+}
+
+.input-wrapper-ink .input-pulse {
+  animation: inputPulse 600ms var(--ink-ease);
+}
+
+@keyframes inputPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(26, 26, 46, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(26, 26, 46, 0.1); }
+}
+
+/* 浮动标签 */
+.floating-label-ink {
+  position: absolute;
+  pointer-events: none;
+  transition: all 200ms var(--ink-ease);
+}
+
+.floating-label-ink.floating {
+  transform: translateY(-100%) scale(0.85);
+}
+
+/* ========== 7. Toast/消息提示 ========== */
+.toast-ink {
+  animation: toastEnter 300ms var(--ink-ease) both;
+}
+
+.toast-ink.closing {
+  animation: toastLeave 200ms var(--ink-ease) both;
+}
+
+@keyframes toastEnter {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastLeave {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+.toast-ink .toast-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+}
+
+.toast-success .toast-bar {
+  background-color: #1a1a2e;
+}
+
+.toast-warning .toast-bar {
+  background-color: #666;
+}
+
+.toast-error .toast-bar {
+  background-color: #333;
+}
+
+.toast-info .toast-bar {
+  background-color: #1a1a2e;
+}
+
+/* ========== 8. 加载状态 ========== */
+/* 页面级进度条 */
+.page-progress-ink {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #e8e8e8;
+  z-index: 9999;
+}
+
+.page-progress-ink .progress-fill {
+  height: 100%;
+  background-color: #1a1a2e;
+  transition: width 200ms var(--ink-ease);
+}
+
+/* 按钮loading旋转器 */
+.loading-spinner-ink {
+  border-color: #1a1a2e;
+  border-top-color: transparent;
+  animation: spinnerRotate 1s linear infinite;
+}
+
+@keyframes spinnerRotate {
+  to { transform: rotate(360deg); }
+}
+
+/* 骨架屏shimmer */
+.skeleton-ink {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #fafafa 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ========== 9. 数字滚动动画 ========== */
+.number-roll-ink {
+  display: inline-block;
+  transition: transform 500ms var(--ink-ease);
+}
+
+/* ========== 10. 回到顶部按钮 ========== */
+.back-to-top-ink {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 48px;
+  height: 48px;
+  background-color: #1a1a2e;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 300ms var(--ink-ease);
+  z-index: 1000;
+}
+
+.back-to-top-ink.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.back-to-top-ink:hover {
+  background-color: #151525;
+}
+
+.back-to-top-ink:active {
+  transform: scale(0.95);
+}
+
+/* ========== 11. 拖拽反馈 ========== */
+.dragging-ink {
+  transform: translateY(-8px) rotate(1deg) scale(1.02);
+  box-shadow: 0 20px 40px rgba(26, 26, 46, 0.15);
+  transition: all 200ms var(--ink-ease);
+}
+
+.drop-target-ink {
+  border: 2px dashed #1a1a2e;
+  background-color: rgba(26, 26, 46, 0.03);
+}
+
+.drop-bounce-ink {
+  animation: dropBounce 300ms var(--ink-ease-out);
+}
+
+@keyframes dropBounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+/* ========== 通用工具类 ========== */
+.transition-fast {
+  transition-duration: 100ms;
+}
+
+.transition-normal {
+  transition-duration: 200ms;
+}
+
+.transition-slow {
+  transition-duration: 300ms;
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}
+
+.user-select-none {
+  user-select: none;
+}

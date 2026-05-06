@@ -2,11 +2,13 @@ package com.resume.airesume.util;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.stereotype.Component;
+
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
+@Component
 public class JwtUtil {
 
     private static final String SECRET_KEY = "ai-resume-secret-key-2026-very-long-and-secure-must-be-at-least-256-bits";

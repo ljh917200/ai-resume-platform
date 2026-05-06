@@ -1,27 +1,27 @@
 <template>
   <div class="home-container">
     <!-- 顶部导航栏 -->
-    <el-header class="top-nav">
-      <div class="logo">
-        <el-icon class="logo-icon"><i class="el-icon-s-operation"></i></el-icon>
-        <span>AI简历优化</span>
-      </div>
-      <el-dropdown>
-        <!-- ★ 改造：有头像显示头像，没头像显示首字母 -->
-        <div class="user-avatar">
-          <el-avatar v-if="userAvatarUrl" :size="40" :src="userAvatarUrl" />
-          <el-avatar v-else :size="40">
-            {{ userName.charAt(0).toUpperCase() }}
-          </el-avatar>
-        </div>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item @click="goProfile">个人中心</el-dropdown-item>
-            <el-dropdown-item @click="logout" divided>退出登录</el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
-    </el-header>
+    <!--    <el-header class="top-nav">-->
+    <!--      <div class="logo">-->
+    <!--        <el-icon class="logo-icon"><i class="el-icon-s-operation"></i></el-icon>-->
+    <!--        <span>AI简历优化</span>-->
+    <!--      </div>-->
+    <!--      <el-dropdown>-->
+    <!--        &lt;!&ndash; ★ 改造：有头像显示头像，没头像显示首字母 &ndash;&gt;-->
+    <!--        <div class="user-avatar">-->
+    <!--          <el-avatar v-if="userAvatarUrl" :size="40" :src="userAvatarUrl" />-->
+    <!--          <el-avatar v-else :size="40">-->
+    <!--            {{ userName.charAt(0).toUpperCase() }}-->
+    <!--          </el-avatar>-->
+    <!--        </div>-->
+    <!--        <template #dropdown>-->
+    <!--          <el-dropdown-menu>-->
+    <!--            <el-dropdown-item @click="goProfile">个人中心</el-dropdown-item>-->
+    <!--            <el-dropdown-item @click="logout" divided>退出登录</el-dropdown-item>-->
+    <!--          </el-dropdown-menu>-->
+    <!--        </template>-->
+    <!--      </el-dropdown>-->
+    <!--    </el-header>-->
 
     <el-main>
       <!-- 欢迎区域 -->
@@ -80,8 +80,8 @@
           <!-- 批量操作按钮（有选中时显示） -->
           <div v-if="selectedIds.length > 0" class="batch-actions">
             <span class="selected-count">已选择 {{ selectedIds.length }} 份</span>
-            <el-button type="danger" size="small" @click="handleBatchDelete">批量删除</el-button>
-            <el-button size="small" @click="clearSelection">取消选择</el-button>
+            <el-button size="small" class="btn-delete">批量删除</el-button>
+            <el-button size="small" class="btn-rename">取消选择</el-button>
           </div>
         </div>
 
@@ -96,7 +96,7 @@
         <div v-else-if="resumeList.length === 0" class="empty-state">
           <div class="empty-icon">📄</div>
           <p class="empty-text">暂无简历，点击上传开始吧</p>
-          <el-button type="primary" @click="scrollToUpload">上传简历</el-button>
+          <el-button class="btn-view" @click="scrollToUpload">上传简历</el-button>
         </div>
 
         <!-- 简历卡片列表 -->
@@ -129,13 +129,15 @@
             <div class="resume-footer">
               <div class="upload-time">{{ formatDate(resume.createdAt) }}</div>
               <div class="resume-actions">
-                <!-- 核心入口：查看简历 -->
-                <el-button type="primary" size="small" @click="goPreview(resume.id)">
+                <el-button size="small" class="btn-view" @click="goPreview(resume.id)">
                   查看简历
                 </el-button>
-                <!-- 重命名按钮 -->
-                <el-button type="warning" size="small" plain @click="openRenameDialog(resume)">重命名</el-button>
-                <el-button type="danger" size="small" @click="handleDelete(resume.id)">删除</el-button>
+                <el-button size="small" class="btn-rename" @click="openRenameDialog(resume)">重命名</el-button>
+                <el-popconfirm title="确定删除这份简历？" @confirm="handleDelete(resume.id)">
+                  <template #reference>
+                    <el-button size="small" class="btn-delete">删除</el-button>
+                  </template>
+                </el-popconfirm>
               </div>
             </div>
           </div>
@@ -392,9 +394,6 @@ const handleRename = async () => {
  */
 const handleDelete = async (id) => {
   try {
-    await ElMessageBox.confirm('确定删除这份简历吗？', '提示', {
-      type: 'warning'
-    })
     const res = await deleteResume(id)
     if (res.code === 200) {
       ElMessage.success('删除成功')
@@ -403,9 +402,7 @@ const handleDelete = async (id) => {
       ElMessage.error(res.message || '删除失败')
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除失败')
-    }
+    ElMessage.error('删除失败')
   }
 }
 
@@ -453,42 +450,11 @@ const logout = () => {
 /* ========== 整体布局 ========== */
 .home-container {
   min-height: 100vh;
-  background: #f5f7fa;
+  background: #f7f7f7;
 }
 
-/* ========== 顶部导航栏 ========== */
-.top-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 24px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-}
-
-.logo-icon {
-  font-size: 20px;
-  color: #409eff;
-}
-
-.user-avatar {
-  cursor: pointer;
-}
-
-/* ★ 头像图片适配 */
-.user-avatar .el-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.el-main {
+  padding: 24px;
 }
 
 /* ========== 欢迎区域 ========== */
@@ -496,98 +462,137 @@ const logout = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 30px;
-  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
-  border-radius: 12px;
+  padding: 28px 32px;
+  background: #fff;
+  border-radius: var(--ink-radius-lg);
+  border: 1px solid var(--ink-border);
   margin-bottom: 24px;
-  color: #fff;
 }
 
 .welcome-content h2 {
   margin: 0 0 8px 0;
-  font-size: 24px;
+  font-size: 22px;
+  color: var(--ink-text-title);
+  font-family: var(--ink-font-serif);
 }
 
 .welcome-subtitle {
   margin: 0;
-  opacity: 0.9;
+  color: var(--ink-text-secondary);
+  font-size: 14px;
 }
 
 .stats-container {
   display: flex;
-  gap: 24px;
+  gap: 32px;
 }
 
 .stat-card {
   text-align: center;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 16px 24px;
-  border-radius: 8px;
+  padding: 14px 28px;
 }
 
 .stat-number {
-  font-size: 28px;
-  font-weight: bold;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--ink-text-title);
+  font-family: var(--ink-font-serif);
 }
 
 .stat-label {
   font-size: 12px;
-  opacity: 0.9;
+  color: var(--ink-text-secondary);
   margin-top: 4px;
 }
 
 /* ========== 快捷操作区 ========== */
 .quick-actions {
-  display: flex;
-  gap: 24px;
   margin-bottom: 24px;
 }
 
 .action-card {
-  flex: 1;
   background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border-radius: var(--ink-radius-lg);
+  border: 2px dashed var(--ink-primary);
+  padding: 32px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.action-card:hover {
+  background: var(--ink-text-title);
+  border-color: var(--ink-text-title);
 }
 
 .action-card h3 {
-  margin: 16px 0 8px 0;
-  font-size: 18px;
+  margin: 12px 0 6px 0;
+  font-size: 16px;
+  color: var(--ink-text-title);
+  font-weight: 600;
+}
+
+.action-card:hover h3 {
+  color: #fff;
 }
 
 .action-card p {
-  color: #666;
+  color: var(--ink-text-secondary);
   margin: 0 0 16px 0;
+  font-size: 13px;
+}
+
+.action-card:hover p {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .upload-area {
   margin-bottom: 16px;
 }
 
+.action-card:hover .el-upload__text,
+.action-card:hover .el-upload__tip {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.action-card:hover .el-icon--upload {
+  color: #fff;
+}
+
 .action-button {
   width: 100%;
+  background: transparent;
+  border: 1px solid var(--ink-primary);
+  color: var(--ink-primary);
+  border-radius: var(--ink-radius-md);
+}
+
+.action-card:hover .action-button {
+  background: #fff;
+  color: var(--ink-text-title);
 }
 
 /* ========== 简历列表 ========== */
 .resume-section {
   background: #fff;
-  border-radius: 12px;
+  border-radius: var(--ink-radius-lg);
   padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--ink-border);
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--ink-border);
 }
 
 .section-title {
   margin: 0;
   font-size: 18px;
-  color: #333;
+  color: var(--ink-text-title);
+  font-weight: 600;
 }
 
 .batch-actions {
@@ -597,65 +602,61 @@ const logout = () => {
 }
 
 .selected-count {
-  color: #666;
+  color: var(--ink-text-secondary);
   font-size: 14px;
 }
 
 /* ========== 简历卡片 ========== */
 .resume-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
 .resume-card {
-  background: #fafafa;
-  border-radius: 8px;
-  padding: 16px;
-  border: 2px solid transparent;
-  transition: all 0.3s;
+  background: #fff;
+  border-radius: var(--ink-radius-md);
+  padding: 18px;
+  border-left: 3px solid var(--ink-primary);
+  border-top: 1px solid var(--ink-border);
+  border-right: 1px solid var(--ink-border);
+  border-bottom: 1px solid var(--ink-border);
+  transition: all 0.3s ease;
   position: relative;
 }
 
 .resume-card.selected {
-  border-color: #409eff;
-  background: #ecf5ff;
+  border-color: var(--ink-primary);
+  background: rgba(44, 62, 80, 0.02);
 }
 
 .resume-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 .select-checkbox {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
 }
 
 .resume-header {
   display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
 .file-icon {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: var(--ink-radius-sm);
   font-size: 18px;
-}
-
-.file-icon.pdf {
-  background: #fef0f0;
-  color: #f56c6c;
-}
-
-.file-icon.docx {
-  background: #ecf5ff;
-  color: #409eff;
+  background: rgba(44, 62, 80, 0.08);
+  color: var(--ink-primary);
 }
 
 .resume-info {
@@ -665,8 +666,9 @@ const logout = () => {
 
 .file-name {
   margin: 0;
-  font-size: 14px;
-  color: #333;
+  font-size: 15px;
+  color: var(--ink-text-title);
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -674,34 +676,79 @@ const logout = () => {
 
 .original-name {
   font-size: 12px;
-  color: #999;
+  color: var(--ink-text-placeholder);
   margin-top: 4px;
 }
 
 .target-role-tag {
   font-size: 12px;
-  color: #409eff;
+  color: var(--ink-primary);
   margin-top: 4px;
+  background: rgba(44, 62, 80, 0.08);
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
 }
 
 .resume-status {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+.resume-status .el-tag {
+  border-color: var(--ink-border);
+  color: var(--ink-text-secondary);
+  background: transparent;
+}
+
+.resume-status .el-tag--success {
+  background: rgba(74, 155, 124, 0.1);
+  border-color: #4a9b7c;
+  color: #4a9b7c;
 }
 
 .resume-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #f5f5f5;
 }
 
 .upload-time {
   font-size: 12px;
-  color: #999;
+  color: var(--ink-text-placeholder);
 }
 
 .resume-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+}
+
+.btn-view {
+  background: var(--ink-text-title) !important;
+  border-color: var(--ink-text-title) !important;
+  color: #fff !important;
+}
+
+.btn-rename {
+  border-color: var(--ink-border) !important;
+  color: var(--ink-text-secondary) !important;
+  background: transparent !important;
+}
+
+.btn-rename:hover {
+  border-color: var(--ink-primary) !important;
+  color: var(--ink-primary) !important;
+}
+
+.btn-delete {
+  color: var(--ink-text-placeholder) !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.btn-delete:hover {
+  color: var(--ink-danger) !important;
 }
 
 /* ========== 空状态 ========== */
@@ -711,26 +758,28 @@ const logout = () => {
 }
 
 .empty-icon {
-  font-size: 60px;
+  font-size: 56px;
   margin-bottom: 16px;
+  opacity: 0.6;
 }
 
 .empty-text {
-  color: #666;
+  color: var(--ink-text-secondary);
   margin-bottom: 20px;
 }
 
 /* ========== 骨架屏 ========== */
 .skeleton-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
 .skeleton-card {
   background: #fff;
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: var(--ink-radius-md);
+  padding: 18px;
+  border: 1px solid var(--ink-border);
 }
 
 /* ========== 上传遮罩 ========== */
@@ -749,10 +798,11 @@ const logout = () => {
 
 .upload-modal {
   background: #fff;
-  border-radius: 16px;
+  border-radius: var(--ink-radius-xl);
   padding: 40px 48px;
   text-align: center;
   min-width: 320px;
+  border: 1px solid var(--ink-border);
 }
 
 .upload-animation {
@@ -762,8 +812,8 @@ const logout = () => {
 .upload-spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid #e4e7ed;
-  border-top-color: #409eff;
+  border: 4px solid #f0f0f0;
+  border-top-color: var(--ink-primary);
   border-radius: 50%;
   margin: 0 auto;
   animation: spin 1s linear infinite;
@@ -778,25 +828,25 @@ const logout = () => {
 .upload-title {
   margin: 0 0 8px 0;
   font-size: 18px;
-  color: #333;
+  color: var(--ink-text-title);
 }
 
 .upload-desc {
-  color: #999;
+  color: var(--ink-text-secondary);
   margin: 0 0 20px 0;
   font-size: 14px;
 }
 
 .progress-bar {
   height: 6px;
-  background: #e4e7ed;
+  background: #f0f0f0;
   border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #409eff, #66b1ff);
+  background: var(--ink-primary);
   border-radius: 3px;
   transition: width 0.3s ease;
 }

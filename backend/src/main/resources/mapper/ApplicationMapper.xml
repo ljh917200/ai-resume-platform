@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.resume.airesume.mapper.ApplicationMapper">
+
+    <!-- 字段映射：数据库列名 ↔ Java实体属性名 -->
+    <resultMap id="BaseResultMap" type="com.resume.airesume.entity.JobApplication">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="company_name" property="companyName"/>
+        <result column="company_industry" property="companyIndustry"/>
+        <result column="company_size" property="companySize"/>
+        <result column="company_location" property="companyLocation"/>
+        <result column="job_title" property="jobTitle"/>
+        <result column="job_category" property="jobCategory"/>
+        <result column="job_level" property="jobLevel"/>
+        <result column="salary_min" property="salaryMin"/>
+        <result column="salary_max" property="salaryMax"/>
+        <result column="source" property="source"/>
+        <result column="source_url" property="sourceUrl"/>
+        <result column="status" property="status"/>
+        <result column="apply_date" property="applyDate"/>
+        <result column="interview_date" property="interviewDate"/>
+        <result column="hr_name" property="hrName"/>
+        <result column="notes" property="notes"/>
+        <result column="job_description" property="jobDescription"/>
+        <result column="resume_id" property="resumeId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 基础列：避免多处重复写字段列表 -->
+    <sql id="Base_Column_List">
+        id, user_id, company_name, company_industry, company_size, company_location,
+        job_title, job_category, job_level, salary_min, salary_max, source, source_url,
+        status, apply_date, interview_date, hr_name, notes, job_description, resume_id,
+        create_time, update_time, deleted
+    </sql>
+
+    <!-- ==================== 新增 ==================== -->
+
+    <!-- 新增投递记录，插入后自动回填主键ID -->
+    <insert id="insert" parameterType="com.resume.airesume.entity.JobApplication"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO job_application (
+        user_id, company_name, company_industry, company_size, company_location,
+        job_title, job_category, job_level, salary_min, salary_max, source, source_url,
+        status, apply_date, interview_date, hr_name, notes, job_description, resume_id
+        ) VALUES (
+        #{userId}, #{companyName}, #{companyIndustry}, #{companySize}, #{companyLocation},
+        #{jobTitle}, #{jobCategory}, #{jobLevel}, #{salaryMin}, #{salaryMax}, #{source}, #{sourceUrl},
+        #{status}, #{applyDate}, #{interviewDate}, #{hrName}, #{notes}, #{jobDescription}, #{resumeId}
+        )
+    </insert>
+
+    <!-- ==================== 更新 ==================== -->
+
+    <!-- 根据ID更新（只更新非空字段），使用<set>标签自动处理末尾逗号 -->
+    <update id="updateById" parameterType="com.resume.airesume.entity.JobApplication">
+        UPDATE job_application
+        <set>
+            <if test="companyName != null">company_name = #{companyName},</if>
+            <if test="companyIndustry != null">company_industry = #{companyIndustry},</if>
+            <if test="companySize != null">company_size = #{companySize},</if>
+            <if test="companyLocation != null">company_location = #{companyLocation},</if>
+            <if test="jobTitle != null">job_title = #{jobTitle},</if>
+            <if test="jobCategory != null">job_category = #{jobCategory},</if>
+            <if test="jobLevel != null">job_level = #{jobLevel},</if>
+            <if test="salaryMin != null">salary_min = #{salaryMin},</if>
+            <if test="salaryMax != null">salary_max = #{salaryMax},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="sourceUrl != null">source_url = #{sourceUrl},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="applyDate != null">apply_date = #{applyDate},</if>
+            <if test="interviewDate != null">interview_date = #{interviewDate},</if>
+            <if test="hrName != null">hr_name = #{hrName},</if>
+            <if test="notes != null">notes = #{notes},</if>
+            <if test="jobDescription != null">job_description = #{jobDescription},</if>
+            <if test="resumeId != null">resume_id = #{resumeId},</if>
+        </set>
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <!-- ==================== 查询 ==================== -->
+
+    <!-- 根据ID查询（过滤已删除的记录） -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM job_application
+        WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <!-- 查询用户投递列表（支持状态过滤+分页），用于getStats等简单场景 -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM job_application
+        WHERE user_id = #{userId} AND deleted = 0
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计用户投递数量（支持状态过滤），用于getStats等简单场景 -->
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM job_application
+        WHERE user_id = #{userId} AND deleted = 0
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+    </select>
+
+    <!--
+        查询用户投递记录列表（支持关键词+状态+渠道+分页）
+        keyword 同时匹配公司名称和职位名称（模糊查询）
+        所有过滤条件均为可选，不传则不限制
+        用于列表页的搜索功能
+    -->
+    <select id="selectByUserIdWithFilter" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM job_application
+        WHERE user_id = #{userId} AND deleted = 0
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (company_name LIKE CONCAT('%', #{keyword}, '%') OR job_title LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="source != null and source != ''">
+            AND source = #{source}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!--
+        统计用户投递记录数量（支持关键词+状态+渠道）
+        与 selectByUserIdWithFilter 配合使用，用于分页总数计算
+    -->
+    <select id="countByUserIdWithFilter" resultType="int">
+        SELECT COUNT(*)
+        FROM job_application
+        WHERE user_id = #{userId} AND deleted = 0
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (company_name LIKE CONCAT('%', #{keyword}, '%') OR job_title LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="source != null and source != ''">
+            AND source = #{source}
+        </if>
+    </select>
+
+    <!-- ==================== 看板 ==================== -->
+
+    <!-- 看板数据：按状态分组统计数量，用于看板页列头展示 -->
+    <select id="selectBoardData" resultType="java.util.Map">
+        SELECT status, COUNT(*) AS count
+        FROM job_application
+        WHERE user_id = #{userId} AND deleted = 0
+        GROUP BY status
+    </select>
+
+    <!-- ==================== 状态更新 ==================== -->
+
+    <!-- 更新投递状态，用于看板拖拽、列表页状态切换 -->
+    <update id="updateStatus">
+        UPDATE job_application
+        SET status = #{status}
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <!-- ==================== 删除 ==================== -->
+
+    <!-- 逻辑删除：将deleted字段设为1，不是物理删除 -->
+    <update id="deleteById">
+        UPDATE job_application
+        SET deleted = 1
+        WHERE id = #{id}
+    </update>
+
+    <!--
+        批量逻辑删除投递记录
+        SQL中通过 user_id 条件校验归属，防止越权删除别人的记录
+        使用 <foreach> 拼接 IN 子句
+    -->
+    <update id="batchDeleteByIds">
+        UPDATE job_application
+        SET deleted = 1
+        WHERE user_id = #{userId}
+        AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- ==================== 统计 ==================== -->
+
+    <!-- 统计本周新增投递数量，YEARWEEK(date, 1) 表示周一为一周的第一天 -->
+    <select id="countThisWeek" resultType="int">
+        SELECT COUNT(*)
+        FROM job_application
+        WHERE user_id = #{userId} AND deleted = 0
+        AND YEARWEEK(create_time, 1) = YEARWEEK(CURDATE(), 1)
+    </select>
+
+</mapper>
+

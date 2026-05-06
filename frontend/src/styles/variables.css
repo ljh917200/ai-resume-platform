@@ -1,12 +1,87 @@
 :root {
-  --primary-color: #667eea;
-  --secondary-color: #764ba2;
-  --success-color: #67C23A;
-  --warning-color: #E6A23C;
-  --danger-color: #F56C6C;
-  --text-primary: #303133;
-  --text-regular: #606266;
-  --text-secondary: #909399;
-  --border-color: #DCDFE6;
-  --bg-color: #f5f5f5;
+  /* ============================================
+     色彩体系 - 水墨风格
+     ============================================ */
+  /* 主色 */
+  --ink-primary: #1a1a2e;
+  --ink-secondary: #2c3e50;
+  --ink-accent: #34495e;
+  
+  /* 中间灰阶 */
+  --ink-gray-900: #1a1a2e;
+  --ink-gray-800: #2d2d44;
+  --ink-gray-700: #3d3d5c;
+  --ink-gray-600: #4a4a6a;
+  --ink-gray-500: #666666;
+  --ink-gray-400: #999999;
+  --ink-gray-300: #cccccc;
+  --ink-gray-200: #e8e8e8;
+  --ink-gray-100: #f5f5f5;
+  
+  /* 背景色阶 */
+  --ink-bg-page: #f5f5f5;
+  --ink-bg-section: #fafafa;
+  --ink-bg-card: #ffffff;
+  --ink-bg-input: #f7f8fa;
+  --ink-bg-nested: #f0f0f0;
+  
+  /* 文字层级 */
+  --ink-text-title: #1a1a2e;
+  --ink-text-primary: #333333;
+  --ink-text-secondary: #666666;
+  --ink-text-placeholder: #999999;
+  --ink-text-disabled: #cccccc;
+  
+  /* 边框 */
+  --ink-border: #e8e8e8;
+  --ink-border-light: #f0f0f0;
+  
+  /* ============================================
+     圆角体系
+     ============================================ */
+  --ink-radius-xs: 6px;
+  --ink-radius-sm: 8px;
+  --ink-radius-md: 12px;
+  --ink-radius-lg: 16px;
+  
+  /* ============================================
+     阴影体系（模拟墨迹层次）
+     ============================================ */
+  --ink-shadow-sm: 0 2px 8px rgba(26, 26, 46, 0.04);
+  --ink-shadow-md: 0 4px 16px rgba(26, 26, 46, 0.06);
+  --ink-shadow-lg: 0 8px 24px rgba(26, 26, 46, 0.08);
+  --ink-shadow-xl: 0 16px 48px rgba(26, 26, 46, 0.12);
+  --ink-shadow-focus: 0 0 0 3px rgba(26, 26, 46, 0.08);
+  
+  /* ============================================
+     间距体系（基准单位8px）
+     ============================================ */
+  --ink-spacing-xs: 8px;
+  --ink-spacing-sm: 16px;
+  --ink-spacing-md: 24px;
+  --ink-spacing-lg: 32px;
+  --ink-spacing-xl: 48px;
+  
+  /* ============================================
+     字体体系
+     ============================================ */
+  --ink-font-serif: "Noto Serif SC", "Source Han Serif SC", "STSong", Georgia, serif;
+  --ink-font-sans: system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --ink-font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  
+  /* 字号 */
+  --ink-font-size-xs: 12px;
+  --ink-font-size-sm: 14px;
+  --ink-font-size-md: 16px;
+  --ink-font-size-lg: 18px;
+  --ink-font-size-xl: 22px;
+  --ink-font-size-xxl: 28px;
+  
+  /* ============================================
+     动效规范
+     ============================================ */
+  --ink-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ink-transition-fast: 150ms var(--ink-ease);
+  --ink-transition-normal: 300ms var(--ink-ease);
+  --ink-transition-slow: 400ms var(--ink-ease);
 }

@@ -1,150 +1,217 @@
 <template>
   <div class="preview-container">
-    <!-- 顶部导航栏 -->
-    <el-header class="top-nav">
-      <div class="logo" @click="goHome">
-        <el-icon class="logo-icon"><i class="el-icon-s-operation"></i></el-icon>
-        <span>AI简历优化</span>
+    <!-- 1. sub-header 顶部操作条 -->
+    <header class="sub-header">
+      <div class="sub-header-left">
+        <a href="#" class="back-link" @click.prevent="goBack">
+          <span class="back-icon">←</span>
+          返回列表
+        </a>
+        <span class="separator"></span>
+        <span class="file-name">{{ resumeData?.fileName || '未命名简历' }}</span>
       </div>
-      <div class="nav-actions">
-        <!-- 模板选择 -->
-        <el-select v-model="currentTemplate" @change="handleTemplateChange" style="width: 120px;">
-          <el-option :value="1" label="简约蓝" />
-          <el-option :value="2" label="商务灰" />
-          <el-option :value="3" label="创意橙" />
+
+      <div class="sub-header-right">
+        <!-- 模板选择下拉框 -->
+        <el-select
+            v-model="currentTemplate"
+            placeholder="选择模板"
+            class="template-select"
+            @change="handleTemplateChange"
+        >
+          <el-option label="简约蓝" :value="1" />
+          <el-option label="商务灰" :value="2" />
+          <el-option label="创意橙" :value="3" />
         </el-select>
 
-        <!-- ★ 显示头像开关（只有用户上传了头像才显示） -->
+        <!-- 缩放控制 -->
+        <div class="zoom-controls">
+          <button class="zoom-btn" @click="zoomOut" :disabled="zoom <= 50">
+            <el-icon><Minus /></el-icon>
+          </button>
+          <span class="zoom-value">{{ zoom }}%</span>
+          <button class="zoom-btn" @click="zoomIn" :disabled="zoom >= 150">
+            <el-icon><Plus /></el-icon>
+          </button>
+        </div>
+
+        <!-- 分隔线 -->
+        <span class="vertical-separator"></span>
+        <!-- 显示头像开关 -->
         <div class="avatar-switch" v-if="hasUserAvatar">
           <span class="switch-label">显示头像</span>
           <el-switch
               v-model="showAvatarInResume"
               @change="handleShowAvatarChange"
-              active-text="开"
-              inactive-text="关"
+              active-color="#1a1a2e"
+              inactive-color="#e8e8e8"
           />
         </div>
 
-        <!-- 优化按钮（没优化过才显示） -->
-        <el-button v-if="!hasOptimized" type="warning" @click="handleOptimize" :loading="optimizing">
-          <el-icon><i class="el-icon-magic-stick"></i></el-icon>
+        <!-- 优化按钮 -->
+        <el-button
+            v-if="!hasOptimized"
+            class="btn-optimize"
+            @click="handleOptimize"
+            :loading="optimizing"
+        >
+          <el-icon><EditPen /></el-icon>
           {{ optimizing ? 'AI优化中...' : '优化简历' }}
         </el-button>
 
-        <!-- 查看历史按钮（有优化历史才显示） -->
+        <!-- 重新优化按钮（已优化） -->
+        <el-button
+            v-else
+            class="btn-reoptimize"
+            @click="handleOptimize"
+            :loading="optimizing"
+        >
+          <el-icon><EditPen /></el-icon>
+          {{ optimizing ? 'AI优化中...' : '重新优化' }}
+        </el-button>
+
+        <!-- 优化历史按钮 -->
         <el-button
             v-if="resumeData?.optimizedText"
+            class="btn-history"
             @click="goHistory"
         >
-          <el-icon><i class="el-icon-time"></i></el-icon>
+          
           优化历史
         </el-button>
 
-        <!-- 导出按钮 - 未优化：直接导出原始简历 -->
+        <!-- 导出PDF下拉按钮 -->
+        <el-dropdown v-if="hasOptimized" @command="handleExport" trigger="click">
+          <el-button class="btn-export">
+            <el-icon><Download /></el-icon>
+            导出PDF
+            <el-icon class="dropdown-arrow"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu class="export-menu">
+              <el-dropdown-item command="original">导出原始简历</el-dropdown-item>
+              <el-dropdown-item command="optimized">导出优化简历</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-button
-            v-if="!hasOptimized"
-            type="success"
+            v-else
+            class="btn-export"
             @click="handleExport('original')"
             :disabled="!htmlContent"
             :loading="exporting"
         >
-          <el-icon><i class="el-icon-download"></i></el-icon>
+          <el-icon><Download /></el-icon>
           导出PDF
         </el-button>
-
-        <!-- 导出按钮 - 已优化：下拉选择导出哪个版本 -->
-        <el-dropdown v-else @command="handleExport" trigger="click">
-          <el-button type="success" :loading="exporting">
-            <el-icon><i class="el-icon-download"></i></el-icon>
-            导出PDF
-            <el-icon class="el-icon--right"><i class="el-icon-arrow-down"></i></el-icon>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="original">
-                导出原始简历
-              </el-dropdown-item>
-              <el-dropdown-item command="optimized">
-                导出优化简历
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
       </div>
-    </el-header>
+    </header>
 
-    <!-- 主内容区 -->
-    <el-main class="main-content">
+    <!-- 3. 预览区 -->
+    <main class="preview-area">
       <!-- 加载状态 -->
       <div v-if="loading" class="loading-container">
         <el-icon class="is-loading" :size="40"><Loading /></el-icon>
         <p>{{ generating ? 'AI正在生成简历...' : '加载中...' }}</p>
       </div>
 
-      <!-- 有优化版：左右对比展示 -->
-      <div v-else-if="hasOptimized" class="compare-wrapper">
-        <!-- 左侧：原始简历 -->
-        <div class="compare-item">
-          <div class="compare-header">
-            <span class="compare-title">原始简历</span>
-            <el-tag size="small" type="info">原始版</el-tag>
-          </div>
-          <div class="compare-content">
-            <div v-if="originalHtml" class="iframe-container">
-              <iframe :srcdoc="addPaddingToHtml(originalHtml)" class="preview-iframe"></iframe>
+      <!-- 已优化：左右对比布局 -->
+      <div v-else-if="hasOptimized && originalHtml && optimizedHtml" class="compare-layout">
+        <!-- 左侧：原始版 -->
+        <div class="compare-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              原始简历
             </div>
-            <div v-else class="loading-inline">
-              <el-icon class="is-loading"><Loading /></el-icon>
-              <span>加载中...</span>
+          </div>
+          <div class="paper-wrapper">
+            <div class="paper" :style="{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }">
+              <div class="iframe-wrapper">
+                <iframe
+                    :key="`original-${currentTemplate}-${zoom}`"
+                    :srcdoc="addPaddingToHtml(originalHtml)"
+                    class="preview-iframe"
+                    @load="(e) => adjustIframeHeight(e)"
+                ></iframe>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 右侧：优化简历 -->
-        <div class="compare-item">
-          <div class="compare-header">
-            <span class="compare-title">优化简历</span>
-            <el-tag size="small" type="success">AI优化版</el-tag>
-          </div>
-          <div class="compare-content">
-            <div v-if="optimizedHtml" class="iframe-container">
-              <iframe :srcdoc="addPaddingToHtml(optimizedHtml)" class="preview-iframe"></iframe>
+        <!-- 分隔线 -->
+        <div class="compare-divider">
+          <div class="divider-line"></div>
+          <div class="divider-label">VS</div>
+          <div class="divider-line"></div>
+        </div>
+
+        <!-- 右侧：优化版 -->
+        <div class="compare-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              优化简历
             </div>
-            <div v-else class="loading-inline">
-              <el-icon class="is-loading"><Loading /></el-icon>
-              <span>加载中...</span>
+          </div>
+          <div class="paper-wrapper">
+            <div class="paper" :style="{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }">
+              <div class="iframe-wrapper">
+                <iframe
+                    :key="`optimized-${currentTemplate}-${zoom}`"
+                    :srcdoc="addPaddingToHtml(optimizedHtml)"
+                    class="preview-iframe"
+                    @load="(e) => adjustIframeHeight(e)"
+                ></iframe>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 无优化版：单列居中展示 -->
-      <div v-else-if="htmlContent" class="single-wrapper">
-        <div class="iframe-container">
-          <iframe :srcdoc="addPaddingToHtml(htmlContent)" class="preview-iframe"></iframe>
+      <!-- 未优化：单列布局（修复版） -->
+      <div v-else-if="htmlContent" class="single-layout">
+        <div class="single-layout-center">
+          <div class="paper-wrapper">
+            <div
+              class="paper single-paper"
+              :style="{
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: 'top center',
+                width: `${A4_WIDTH}px`
+              }"
+            >
+              <div class="iframe-wrapper">
+                <iframe
+                    :key="`single-${currentTemplate}-${zoom}`"
+                    :srcdoc="addPaddingToHtml(htmlContent)"
+                    class="preview-iframe"
+                    @load="(e) => adjustIframeHeight(e)"
+                ></iframe>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- 无内容时 -->
+      <!-- 空状态 -->
       <div v-else class="empty-container">
         <el-empty description="暂无预览内容">
-          <el-button type="primary" @click="generatePreview" :loading="generating">
+          <el-button class="btn-primary-ink" @click="generatePreview" :loading="generating">
             {{ generating ? '生成中...' : '生成预览' }}
           </el-button>
         </el-empty>
       </div>
-    </el-main>
+    </main>
 
     <!-- 优化弹窗 -->
-    <el-dialog v-model="showOptimizeDialog" title="优化简历" width="400px">
+    <el-dialog v-model="showOptimizeDialog" title="优化简历" width="400px" class="optimize-dialog">
       <el-form>
         <el-form-item label="目标岗位">
           <el-input v-model="targetRole" placeholder="例如：前端开发工程师（可选）" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showOptimizeDialog = false">取消</el-button>
-        <el-button type="primary" @click="confirmOptimize" :loading="optimizing">
+        <el-button class="btn-outline-ink" @click="showOptimizeDialog = false">取消</el-button>
+        <el-button class="btn-primary-ink" @click="confirmOptimize" :loading="optimizing">
           {{ optimizing ? '优化中...' : '开始优化' }}
         </el-button>
       </template>
@@ -159,7 +226,7 @@
             <div class="pulse-ring delay-1"></div>
             <div class="pulse-ring delay-2"></div>
             <div class="ai-icon">
-              <el-icon :size="48"><i class="el-icon-magic-stick"></i></el-icon>
+              <el-icon :size="48"><EditPen /></el-icon>
             </div>
           </div>
           <h3 class="optimize-title">AI 正在优化您的简历</h3>
@@ -175,14 +242,13 @@
 </template>
 
 <script setup>
-/**
- * 简历预览页面（v1.7.0 核心页面）
- * ★ v1.8.0新增：显示头像开关功能
- */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Loading } from '@element-plus/icons-vue'
+import {
+  Loading, EditPen, Download, ArrowDown, Plus, Minus
+  
+} from '@element-plus/icons-vue'
 import {
   getResume,
   generateHtml,
@@ -210,12 +276,22 @@ const originalHtml = ref('')
 const optimizedHtml = ref('')
 
 const currentTemplate = ref(1)
+
+// 缩放控制
+const zoom = ref(100)
+
+// A4纸宽度基准（794px ≈ 210mm @96dpi）
+const A4_WIDTH = 794
+
+// 面板宽度（用于对比布局）
+const panelWidth = computed(() => {
+  return Math.min(700, window.innerWidth * 0.4) * zoom.value / 100
+})
+
 const showOptimizeDialog = ref(false)
 const targetRole = ref('')
-
-// ★ 头像相关
-const showAvatarInResume = ref(false)  // 是否在简历中显示头像
-const hasUserAvatar = ref(false)       // 用户是否上传了头像
+const showAvatarInResume = ref(false)
+const hasUserAvatar = ref(false)
 
 // 优化动画相关
 const optimizeTip = ref('正在分析简历结构...')
@@ -238,13 +314,49 @@ const hasOptimized = computed(() => {
 // ========== 生命周期 ==========
 onMounted(async () => {
   await loadResume()
+  window.addEventListener('resize', handleWindowResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleWindowResize)
+  stopOptimizeAnimation()
 })
 
 // ========== 方法 ==========
 
 /**
- * 给HTML内容注入padding样式
+ * 窗口resize时重新调整所有iframe高度
  */
+const handleWindowResize = () => {
+  document.querySelectorAll('.preview-iframe').forEach(iframe => {
+    adjustIframeHeight({ target: iframe })
+  })
+}
+
+/**
+ * 自适应iframe高度：读取iframe内容实际高度并设置
+ */
+const adjustIframeHeight = (event) => {
+  const iframe = event.target
+  if (!iframe) return
+  try {
+    const doc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!doc || !doc.body) return
+    // 获取内容实际高度
+    const contentHeight = Math.max(
+      doc.body.scrollHeight,
+      doc.body.offsetHeight,
+      doc.documentElement.scrollHeight,
+      doc.documentElement.offsetHeight
+    )
+    // 设置最小高度，避免内容太少时太矮
+    iframe.style.height = Math.max(contentHeight, 600) + 'px'
+  } catch (e) {
+    // 跨域iframe无法访问，使用默认高度
+    iframe.style.height = '1200px'
+  }
+}
+
 const addPaddingToHtml = (html) => {
   if (!html) return ''
 
@@ -276,10 +388,8 @@ const loadResume = async () => {
     resumeData.value = res.data || res
     currentTemplate.value = resumeData.value?.templateId || 1
 
-    // ★ 读取简历的头像显示状态
     showAvatarInResume.value = resumeData.value?.showAvatar === 1
 
-    // ★ 检查用户是否上传了头像（从localStorage读取）
     const userStr = localStorage.getItem('user')
     if (userStr) {
       try {
@@ -344,9 +454,11 @@ const generatePreview = async () => {
   }
 }
 
-const handleTemplateChange = async () => {
+const handleTemplateChange = async (templateId) => {
+  currentTemplate.value = templateId
+
   try {
-    await switchTemplate(resumeId, currentTemplate.value)
+    await switchTemplate(resumeId, templateId)
   } catch (error) {
     console.error('保存模板失败:', error)
   }
@@ -355,6 +467,18 @@ const handleTemplateChange = async () => {
     await loadBothVersions()
   } else {
     await generatePreview()
+  }
+}
+
+const zoomIn = () => {
+  if (zoom.value < 150) {
+    zoom.value += 10
+  }
+}
+
+const zoomOut = () => {
+  if (zoom.value > 50) {
+    zoom.value -= 10
   }
 }
 
@@ -419,23 +543,19 @@ const confirmOptimize = async () => {
   }
 }
 
-/**
- * 跳转到优化历史页面
- */
 const goHistory = () => {
   router.push(`/history/${resumeId}`)
 }
 
-/**
- * ★ 切换简历中是否显示头像
- * 切换后后端会清除缓存并重新预生成，前端刷新预览即可
- */
+const goBack = () => {
+  router.push('/home')
+}
+
 const handleShowAvatarChange = async (val) => {
   try {
     const res = await toggleShowAvatar(resumeId, val ? 1 : 0)
     if (res.code === 200) {
       ElMessage.success(val ? '已开启头像显示' : '已关闭头像显示')
-      // 不需要重新生成，只需要刷新预览（后端会实时注入头像）
       if (hasOptimized.value) {
         await loadBothVersions()
       } else {
@@ -452,11 +572,6 @@ const handleShowAvatarChange = async (val) => {
   }
 }
 
-
-/**
- * 导出 PDF
- * @param {string} type - 'original' 或 'optimized'
- */
 const handleExport = async (type) => {
   let htmlToExport = ''
   if (type === 'optimized') {
@@ -497,184 +612,470 @@ const handleExport = async (type) => {
     exporting.value = false
   }
 }
-
-const goHome = () => {
-  router.push('/home')
-}
 </script>
 
 <style scoped>
 /* ========== 整体布局 ========== */
 .preview-container {
   min-height: 100vh;
-  background: #f5f7fa;
-  overflow: hidden;
+  background: #f5f5f5;
+  display: flex;
+  flex-direction: column;
 }
 
-.top-nav {
+/* ========== 1. sub-header 顶部操作条 ========== */
+.sub-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
   background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  height: 60px;
+  border-bottom: 1px solid #e8e8e8;
+  height: 48px;
+  flex-shrink: 0;
 }
 
-.logo {
+.sub-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.back-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #1a1a2e;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s ease;
+  position: relative;
+}
+
+.back-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: #1a1a2e;
+  transition: width 0.2s ease;
+}
+
+.back-link:hover::after {
+  width: 100%;
+}
+
+.back-icon {
+  font-size: 14px;
+}
+
+.separator {
+  width: 1px;
+  height: 20px;
+  background: #e8e8e8;
+}
+
+.file-name {
+  font-size: 14px;
+  color: #666;
+}
+
+/* 模板选择下拉框 */
+.template-select {
+  width: 140px;
+}
+
+.template-select :deep(.el-select__wrapper) {
+  background: #fff;
+  border-radius: 8px;
+  border-color: #e8e8e8;
+}
+
+.template-select :deep(.el-select__wrapper.is-focus) {
+  border-color: #1a1a2e;
+  box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.06);
+}
+
+/* 缩放控制 */
+.zoom-controls {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  cursor: pointer;
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px;
 }
 
-.logo:hover { color: #409eff; }
+.zoom-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #1a1a2e;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #1a1a2e;
+  transition: all 0.1s ease;
+}
 
-.logo-icon { font-size: 20px; color: #409eff; }
+.zoom-btn:hover:not(:disabled) {
+  background: #1a1a2e;
+  color: #fff;
+}
 
-.nav-actions {
+.zoom-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.zoom-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.zoom-value {
+  font-size: 14px;
+  color: #666;
+  min-width: 50px;
+  text-align: center;
+}
+
+.sub-header-right {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-/* ========== 头像开关样式 ========== */
+/* 垂直分隔线 */
+.vertical-separator {
+  width: 1px;
+  height: 24px;
+  background: #e8e8e8;
+}
+
+/* 头像开关 */
 .avatar-switch {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-  border-right: 1px solid #e4e7ed;
-  margin-right: 4px;
+  gap: 8px;
+  padding: 0 12px;
+  border-right: 1px solid #e8e8e8;
 }
 
 .switch-label {
   font-size: 13px;
-  color: #606266;
-  white-space: nowrap;
+  color: #666;
 }
 
-/* ========== 主内容区 ========== */
-.main-content {
-  padding: 20px;
-  height: calc(100vh - 60px);
-  box-sizing: border-box;
-  overflow: hidden;
+/* ========== 3. 预览区 ========== */
+.preview-area {
+  flex: 1;
+  background: #e8e8e8;
+  overflow-y: auto;
+  padding: 24px;
 }
 
-/* ========== 单列布局 ========== */
-.single-wrapper {
-  height: 100%;
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  gap: 12px;
+  color: #666;
+}
+
+/* ========== 对比布局（已优化） ========== */
+.compare-layout {
+  display: flex;
+  padding: 0 5%;
+  gap: 10%;
+}
+
+.compare-panel {
+  width: 40%;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 0 8px;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a1a2e;
+}
+
+.panel-badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  background: #f0f0f0;
+  color: #666;
+  border-radius: 4px;
+}
+
+.panel-badge.optimized {
+  background: rgba(26, 26, 46, 0.1);
+  color: #1a1a2e;
+}
+
+/* 分隔线 */
+.compare-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  height: 100px;
+}
+
+.divider-line {
+  flex: 1;
+  width: 1px;
+  background: #d0d0d0;
+}
+
+.divider-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #999;
+  padding: 8px 0;
+}
+
+/* ========== 单列布局（未优化）- 修复版 ========== */
+.single-layout {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  overflow: auto;
 }
 
-/* ========== iframe容器 ========== */
-.iframe-container {
+/* 关键修复：居中容器，约束纸张位置 */
+.single-layout-center {
+  display: flex;
+  justify-content: center;
   width: 100%;
-  min-width: 700px;
-  max-width: 780px;
-  background: #fff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* ========== iframe样式 ========== */
+/* 单列布局的纸张：固定A4宽度 + 缩放transform */
+.single-paper {
+  /* A4宽度由inline style的 :style 绑定控制 */
+  min-height: 600px;
+}
+
+/* 纸张包装器 */
+.paper-wrapper {
+  animation: paperEnter 500ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes paperEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* A4纸张 */
+.paper {
+  background: #fff;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  transition: box-shadow 0.3s ease;
+}
+
+.paper:hover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+}
+
+.iframe-wrapper {
+  width: 100%;
+}
+
 .preview-iframe {
   border: none;
   display: block;
   width: 100%;
-  height: 1200px;
+  /* 不再写死高度，由 adjustIframeHeight 动态设置 */
+  min-height: 600px;
+  height: 1200px; /* 默认回退值，会被JS覆盖 */
   background: #fff;
 }
 
-/* ========== 左右对比布局 ========== */
-.compare-wrapper {
-  display: flex;
-  gap: 20px;
-  height: 100%;
-  overflow: hidden;
-}
-
-.compare-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.compare-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  border-bottom: 1px solid #e4e7ed;
-  background: #fafafa;
-  flex-shrink: 0;
-}
-
-.compare-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.compare-content {
-  flex: 1;
-  overflow: auto;
-  display: flex;
-  justify-content: center;
-  padding: 16px;
-}
-
-.compare-content .iframe-container {
-  width: 100%;
-  max-width: none;
-  height: 100%;
-}
-
-.compare-content .preview-iframe {
-  width: 100%;
-  height: 100%;
-}
-
-/* ========== 加载状态 ========== */
-.loading-container,
-.loading-inline {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: 12px;
-  color: #909399;
-}
-
-.loading-inline { flex-direction: row; height: auto; padding: 40px; }
-
-/* ========== 空状态 ========== */
+/* 空状态 */
 .empty-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  height: 400px;
 }
 
-/* ========== 优化动画 ========== */
+/* ========== 按钮样式 ========== */
+.btn-optimize {
+  background: #1a1a2e !important;
+  border-color: #1a1a2e !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  padding: 6px 16px !important;
+  font-size: 14px !important;
+  transition: transform 0.1s ease;
+}
+
+.btn-optimize:hover {
+  background: #151525 !important;
+  border-color: #151525 !important;
+}
+
+.btn-optimize:active {
+  transform: scale(0.97);
+}
+
+.btn-reoptimize {
+  background: transparent !important;
+  border-color: #1a1a2e !important;
+  color: #1a1a2e !important;
+  border-radius: 8px !important;
+  padding: 6px 16px !important;
+  font-size: 14px !important;
+  transition: all 0.1s ease;
+}
+
+.btn-reoptimize:hover {
+  background: rgba(26, 26, 46, 0.05) !important;
+}
+
+.btn-reoptimize:active {
+  transform: scale(0.97);
+}
+
+.btn-history {
+  background: transparent !important;
+  border-color: #1a1a2e !important;
+  color: #1a1a2e !important;
+  border-radius: 8px !important;
+  padding: 6px 16px !important;
+  font-size: 14px !important;
+  transition: all 0.1s ease;
+}
+
+.btn-history:hover {
+  background: rgba(26, 26, 46, 0.05) !important;
+}
+
+.btn-history:active {
+  transform: scale(0.97);
+}
+
+.btn-export {
+  background: transparent !important;
+  border-color: #1a1a2e !important;
+  color: #1a1a2e !important;
+  border-radius: 8px !important;
+  padding: 6px 16px !important;
+  font-size: 14px !important;
+  transition: all 0.1s ease;
+}
+
+.btn-export:hover {
+  background: rgba(26, 26, 46, 0.05) !important;
+}
+
+.btn-export:active {
+  transform: scale(0.97);
+}
+
+.dropdown-arrow {
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.btn-primary-ink {
+  background: #1a1a2e !important;
+  border-color: #1a1a2e !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  transition: transform 0.1s ease;
+}
+
+.btn-primary-ink:hover {
+  background: #151525 !important;
+}
+
+.btn-primary-ink:active {
+  transform: scale(0.97);
+}
+
+.btn-outline-ink {
+  background: transparent !important;
+  border-color: #1a1a2e !important;
+  color: #1a1a2e !important;
+  border-radius: 8px !important;
+  transition: all 0.1s ease;
+}
+
+.btn-outline-ink:hover {
+  background: rgba(26, 26, 46, 0.05) !important;
+}
+
+.btn-outline-ink:active {
+  transform: scale(0.97);
+}
+
+/* ========== 导出菜单 ========== */
+.export-menu::deep .el-dropdown-menu__item {
+  color: #1a1a2e;
+}
+
+/* ========== 优化弹窗 ========== */
+.optimize-dialog::deep .el-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.optimize-dialog::deep .el-dialog__header {
+  border-bottom: 2px solid #1a1a2e;
+  background: #fff;
+}
+
+.optimize-dialog::deep .el-dialog__title {
+  font-family: "Noto Serif SC", Georgia, serif;
+  color: #1a1a2e;
+  font-size: 18px;
+}
+
+.optimize-dialog::deep .el-input__wrapper {
+  background: #f7f8fa;
+  border-radius: 8px;
+}
+
+.optimize-dialog::deep .el-input__wrapper.is-focus {
+  border-color: #1a1a2e;
+  box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.06);
+}
+
+/* ========== 优化全屏遮罩 ========== */
 .optimize-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(26, 26, 46, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -687,6 +1088,18 @@ const goHome = () => {
   padding: 48px;
   text-align: center;
   min-width: 360px;
+  animation: modalEnter 300ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .optimize-animation {
@@ -700,7 +1113,7 @@ const goHome = () => {
   position: absolute;
   width: 100%;
   height: 100%;
-  border: 2px solid #F76B1C;
+  border: 2px solid #1a1a2e;
   border-radius: 50%;
   animation: pulse 2s ease-out infinite;
 }
@@ -718,11 +1131,17 @@ const goHome = () => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: #F76B1C;
+  color: #1a1a2e;
 }
 
-.optimize-title { font-size: 20px; color: #303133; margin-bottom: 12px; }
-.optimize-desc { color: #909399; margin-bottom: 24px; }
+.optimize-title {
+  font-size: 20px;
+  color: #1a1a2e;
+  margin-bottom: 12px;
+  font-family: "Noto Serif SC", Georgia, serif;
+}
+
+.optimize-desc { color: #666; margin-bottom: 24px; }
 
 .progress-bar {
   width: 100%;
@@ -735,14 +1154,89 @@ const goHome = () => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #F76B1C, #FF9A56);
+  background: #1a1a2e;
   border-radius: 3px;
   transition: width 0.3s ease;
 }
 
-.optimize-time { font-size: 12px; color: #c0c4cc; }
+.optimize-time { font-size: 12px; color: #999; }
 
 /* ========== 过渡动画 ========== */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 1024px) {
+  .compare-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .compare-panel {
+    max-width: 100%;
+  }
+
+  .compare-divider {
+    flex-direction: row;
+    height: auto;
+    padding: 8px 0;
+  }
+
+  .divider-line {
+    flex: 1;
+    height: 1px;
+    width: auto;
+  }
+
+  .divider-label {
+    padding: 0 16px;
+  }
+
+  .paper {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .sub-header {
+    padding: 0 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+    height: auto;
+    padding: 8px 16px;
+  }
+
+  .toolbar {
+    padding: 0 16px;
+    margin-top: 80px;
+  }
+
+  .btn-optimize,
+  .btn-reoptimize,
+  .btn-history,
+  .btn-export {
+    padding: 4px 12px !important;
+    font-size: 13px !important;
+  }
+
+  .avatar-switch {
+    padding: 0 8px;
+  }
+
+  .preview-area {
+    padding: 16px;
+  }
+
+  /* 小屏下单列布局纸张自适应 */
+  .single-paper {
+    width: 100% !important;
+  }
+}
 </style>
