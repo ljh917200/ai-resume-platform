@@ -38,7 +38,7 @@
         <!-- 分隔线 -->
         <span class="vertical-separator"></span>
         <!-- 显示头像开关 -->
-        <div class="avatar-switch" v-if="hasUserAvatar">
+        <div class="avatar-switch">
           <span class="switch-label">显示头像</span>
           <el-switch
               v-model="showAvatarInResume"
@@ -621,6 +621,13 @@ const handleExport = async (type) => {
   background: #f5f5f5;
   display: flex;
   flex-direction: column;
+  margin: 0;
+  padding: 0;
+}
+
+:deep(body) {
+  margin: 0;
+  padding: 0;
 }
 
 /* ========== 1. sub-header 顶部操作条 ========== */

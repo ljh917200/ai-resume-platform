@@ -195,7 +195,6 @@ function updateIndicator() {
   nextTick(() => {
     const activePath = activeTabPath.value
     
-    // Dashboard页面时隐藏指示条
     if (!activePath) {
       indicatorStyle.value = {
         left: '0px',
@@ -312,7 +311,7 @@ onMounted(() => {
   background: #ffffff;
   border-bottom: 1px solid #e8e8e8;
   padding: 0 24px;
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
@@ -332,7 +331,7 @@ onMounted(() => {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--ink-text-title);
+  background: var(--ink-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -375,13 +374,13 @@ onMounted(() => {
   font-size: 14px;
   color: #999999;
   white-space: nowrap;
-  transition: color 0.3s var(--ink-ease);
+  transition: color 300ms var(--ink-ease);
   position: relative;
   border-radius: var(--ink-radius-xs);
 }
 
 .nav-tab:hover {
-  color: var(--ink-text-title);
+  color: var(--ink-text-secondary);
   background: rgba(26, 26, 46, 0.03);
 }
 
@@ -395,9 +394,9 @@ onMounted(() => {
   position: absolute;
   bottom: -1px;
   height: 2px;
-  background: var(--ink-text-title);
+  background: var(--ink-primary);
   border-radius: 1px;
-  transition: left 0.3s var(--ink-ease), width 0.3s var(--ink-ease), opacity 0.2s var(--ink-ease);
+  transition: left 300ms var(--ink-ease), width 300ms var(--ink-ease), opacity 200ms var(--ink-ease);
   pointer-events: none;
 }
 
@@ -409,8 +408,8 @@ onMounted(() => {
   line-height: 16px;
   border-radius: 4px;
   background: rgba(201, 166, 90, 0.1);
-  border: 1px solid var(--ink-warning);
-  color: var(--ink-warning);
+  border: 1px solid var(--ink-gray-400);
+  color: var(--ink-gray-500);
 }
 
 /* 移动端菜单按钮 */
@@ -436,12 +435,14 @@ onMounted(() => {
 
 .user-avatar {
   cursor: pointer;
-  transition: transform 0.2s var(--ink-ease);
+  transition: transform var(--ink-transition-fast);
 }
 
 .user-avatar .el-avatar {
+  width: 36px;
+  height: 36px;
   border: 1px solid #e8e8e8;
-  transition: border-color 0.2s var(--ink-ease);
+  transition: border-color var(--ink-transition-fast);
 }
 
 .user-avatar:hover {
@@ -449,13 +450,13 @@ onMounted(() => {
 }
 
 .user-avatar:hover .el-avatar {
-  border-color: var(--ink-text-title);
+  border-color: var(--ink-primary);
 }
 
 /* 下拉菜单过渡 */
 .dropdown-enter-active,
 .dropdown-leave-active {
-  animation: dropdownSlide 0.2s var(--ink-ease) both;
+  animation: dropdownSlide 200ms var(--ink-ease) both;
 }
 
 .dropdown-enter-active {
@@ -513,7 +514,7 @@ onMounted(() => {
   cursor: pointer;
   font-size: 15px;
   color: var(--ink-text-secondary);
-  transition: background 0.2s var(--ink-ease), color 0.2s var(--ink-ease);
+  transition: background var(--ink-transition-fast), color var(--ink-transition-fast);
 }
 
 .mobile-tab:hover {
@@ -530,7 +531,7 @@ onMounted(() => {
 .main-content {
   flex: 1;
   overflow-y: auto;
-  padding-top: 60px;
+  /* padding-top: 10px; */
 }
 
 /* 页面过渡动画 */
@@ -560,14 +561,14 @@ onMounted(() => {
   }
   to {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(0);
   }
 }
 
 /* 移动端菜单滑动动画 */
 .slide-down-enter-active,
 .slide-down-leave-active {
-  animation: slideDown 0.25s var(--ink-ease) both;
+  animation: slideDown 250ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .slide-down-enter-active {
@@ -645,6 +646,17 @@ onMounted(() => {
   
   .top-nav {
     padding: 0 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-nav {
+    padding: 0 12px;
+  }
+  
+  .mobile-tab {
+    padding: 12px 16px;
+    font-size: 14px;
   }
 }
 </style>

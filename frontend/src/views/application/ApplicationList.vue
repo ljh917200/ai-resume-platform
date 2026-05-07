@@ -112,7 +112,6 @@
               </template>
             </el-table-column>
             <el-table-column prop="applyDate" label="投递日期" width="130" align="center" />
-            <!-- 把原来第115行的操作列替换 -->
             <el-table-column label="操作" width="390" align="center">
               <template #default="{ row }">
                 <el-button link class="btn-edit" size="small" @click="handleEdit(row)">编辑</el-button>

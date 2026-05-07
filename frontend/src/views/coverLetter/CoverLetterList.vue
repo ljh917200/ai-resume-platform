@@ -376,37 +376,110 @@ onMounted(() => {
 
 <style scoped>
 .cover-letter-container {
-  padding: 20px;
+  min-height: 100vh;
+  background: var(--ink-bg);
+  padding: 32px;
+}
+
+.cover-letter-container > * {
   max-width: 1200px;
-  margin: 0 auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .page-header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .page-header h2 {
-  margin: 0 0 6px 0;
+  margin: 0 0 8px 0;
   font-size: 22px;
+  font-family: var(--ink-font-serif);
+  color: var(--ink-primary);
 }
 
 .page-header .subtitle {
   margin: 0;
   font-size: 14px;
-  color: #909399;
+  color: #999;
 }
 
 .input-card,
 .result-card,
 .history-card {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  background: #fff;
+  border-radius: var(--ink-radius-card);
+  box-shadow: var(--ink-shadow-card);
+  border: none;
+}
+
+.input-card {
+  padding: 24px;
+}
+
+.input-card :deep(.el-form-item__label) {
+  color: var(--ink-text-secondary);
+  font-size: 13px;
+}
+
+.input-card :deep(.el-input__wrapper),
+.input-card :deep(.el-select__wrapper) {
+  border-radius: var(--ink-radius-btn);
+  border: 1px solid var(--ink-border);
+  background: #f7f8fa;
+}
+
+.input-card :deep(.el-textarea__inner) {
+  border-radius: var(--ink-radius-btn);
+  border: 1px solid var(--ink-border);
+  background: #f7f8fa;
+}
+
+.input-card :deep(.el-radio-button) {
+  padding: 6px 16px;
+  border-radius: var(--ink-radius-btn);
+}
+
+.input-card :deep(.el-radio-button__inner) {
+  border-radius: var(--ink-radius-btn);
+}
+
+.input-card :deep(.el-radio-button.is-active) {
+  background: var(--ink-primary) !important;
+  border: none !important;
+}
+
+.input-card :deep(.el-radio-button.is-active .el-radio-button__inner) {
+  background: var(--ink-primary) !important;
+  border: none !important;
+  color: #fff !important;
+}
+
+.input-card .el-button--primary {
+  background: var(--ink-primary) !important;
+  border-color: var(--ink-primary) !important;
+  color: #fff !important;
+  border-radius: var(--ink-radius-btn);
 }
 
 /* 结果区域 */
+.result-card {
+  overflow: hidden;
+  animation: letterEnter 300ms var(--ink-ease);
+}
+
+@keyframes letterEnter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .result-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 16px 32px;
+  border-bottom: 1px solid #e8e8e8;
 }
 
 .result-info {
@@ -414,37 +487,170 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
+}
+
+.result-info span:first-child {
+  font-family: var(--ink-font-serif);
+  color: var(--ink-primary);
 }
 
 .company-tag {
-  color: #909399;
+  color: #999;
   font-weight: 400;
+}
+
+.result-info .el-tag {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  border: none;
+}
+
+.result-info .el-tag--info {
+  background: #f0f0f0;
+  color: #666;
 }
 
 .result-actions {
   display: flex;
-  gap: 8px;
+  gap: 12px;
+}
+
+.result-actions .el-button {
+  border-radius: var(--ink-radius-btn);
+  padding: 8px 16px;
+}
+
+.result-actions .el-button:first-child {
+  background: transparent;
+  border-color: var(--ink-primary);
+  color: var(--ink-primary);
+}
+
+.result-actions .el-button:first-child:hover {
+  background: rgba(26, 26, 46, 0.05);
+}
+
+.result-actions .el-button:last-child {
+  background: var(--ink-primary);
+  border-color: var(--ink-primary);
+  color: #fff;
 }
 
 /* 求职信内容 */
 .letter-content {
-  padding: 24px 32px;
-  line-height: 2;
-  font-size: 15px;
-  color: #303133;
-  background: #fafbfc;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
-  white-space: pre-wrap;
+  background: #fefefe;
+  padding: 32px 40px;
+  line-height: 1.9;
+  font-size: 14.5px;
+  color: var(--ink-text);
+  border-top: 3px solid var(--ink-primary);
+}
+
+.letter-content > div {
+  text-indent: 2em;
+}
+
+.letter-content > div > div {
+  margin-bottom: 12px;
+}
+
+.letter-content > div > div:last-child {
+  margin-bottom: 0;
+}
+
+.result-card::after {
+  content: '此信由AI生成，建议根据实际情况修改';
+  display: block;
+  padding: 12px 40px;
+  font-size: 12px;
+  color: #bbb;
+  text-align: center;
+  border-top: 1px solid #f0f0f0;
 }
 
 /* 历史区域 */
+.history-card {
+  padding: 24px;
+}
+
 .history-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 16px;
   font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.history-card :deep(.el-button--text) {
+  color: var(--ink-text-secondary);
+}
+
+.history-card :deep(.el-table) {
+  border-radius: var(--ink-radius-card);
+  overflow: hidden;
+}
+
+.history-card :deep(.el-table__header-wrapper) {
+  background: #fafafa;
+}
+
+.history-card :deep(.el-table th) {
+  background: #fafafa;
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.history-card :deep(.el-table td) {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 14px 16px;
+}
+
+.history-card :deep(.el-table__row) {
+  transition: all 300ms var(--ink-ease);
+}
+
+.history-card :deep(.el-table__row:hover) {
+  background: #fafafa;
+  transform: translateX(2px);
+}
+
+.history-card :deep(.el-table__empty-text) {
+  font-family: var(--ink-font-serif);
+  color: #999;
+  font-size: 16px;
+}
+
+.history-card :deep(.el-table__empty-wrapper)::after {
+  content: '选择简历和岗位，生成你的第一封求职信';
+  display: block;
+  font-size: 13px;
+  color: #bbb;
+  margin-top: 8px;
+}
+
+.history-card :deep(.el-tag) {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  border: none;
+}
+
+.history-card :deep(.el-tag--success) {
+  background: var(--ink-primary);
+  color: #fff;
+}
+
+.history-card :deep(.el-tag--warning) {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.history-card :deep(.el-tag--info) {
+  background: var(--ink-secondary);
+  color: #fff;
 }
 </style>

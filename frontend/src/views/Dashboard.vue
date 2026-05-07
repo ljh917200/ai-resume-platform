@@ -299,7 +299,7 @@ onUnmounted(() => {
   font-size: 13px;
   color: var(--ink-text-secondary);
   text-decoration: none;
-  transition: color 0.2s var(--ink-ease);
+  transition: color var(--ink-transition-fast);
 }
 
 .view-all:hover {
@@ -342,7 +342,7 @@ onUnmounted(() => {
 }
 
 .current-time {
-  font-size: 20px;
+  font-size: 18px;
   font-family: var(--ink-font-mono);
   color: var(--ink-text-title);
   font-weight: 500;
@@ -364,12 +364,12 @@ onUnmounted(() => {
   opacity: 0;
   animation: statCardEnter 400ms var(--ink-ease) both;
   animation-delay: var(--stagger-delay);
-  transition: all 0.3s var(--ink-ease);
+  transition: all var(--ink-transition-normal);
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(26, 26, 46, 0.08);
+  box-shadow: var(--ink-shadow-lg);
 }
 
 @keyframes statCardEnter {
@@ -389,7 +389,7 @@ onUnmounted(() => {
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--ink-text-title);
+  background: var(--ink-primary);
 }
 
 .stat-content {
@@ -420,11 +420,11 @@ onUnmounted(() => {
 }
 
 .stat-trend.up {
-  color: #4a9b7c;
+  color: var(--ink-text-secondary);
 }
 
 .stat-trend.down {
-  color: #c75b5b;
+  color: var(--ink-text-secondary);
 }
 
 /* 功能模块网格 */
@@ -443,12 +443,12 @@ onUnmounted(() => {
   opacity: 0;
   animation: moduleCardEnter 400ms var(--ink-ease) both;
   animation-delay: var(--stagger-delay);
-  transition: all 0.3s var(--ink-ease);
+  transition: all var(--ink-transition-normal);
 }
 
 .module-card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 12px 32px rgba(26, 26, 46, 0.1);
+  box-shadow: var(--ink-shadow-lg);
 }
 
 @keyframes moduleCardEnter {
@@ -463,16 +463,16 @@ onUnmounted(() => {
 }
 
 .module-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: var(--ink-text-title);
+  background: var(--ink-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
   margin-bottom: 16px;
-  transition: transform 0.3s var(--ink-ease);
+  transition: transform var(--ink-transition-normal);
 }
 
 .module-card:hover .module-icon {
@@ -498,7 +498,7 @@ onUnmounted(() => {
   right: 24px;
   bottom: 24px;
   color: var(--ink-text-secondary);
-  transition: transform 0.3s var(--ink-ease);
+  transition: all var(--ink-transition-normal);
 }
 
 .module-card:hover .module-arrow {
@@ -510,6 +510,7 @@ onUnmounted(() => {
   background: #ffffff;
   border-radius: var(--ink-radius-md);
   padding: 24px;
+  box-shadow: var(--ink-shadow-sm);
 }
 
 .timeline-item {
@@ -544,7 +545,7 @@ onUnmounted(() => {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--ink-text-title);
+  background: var(--ink-primary);
   flex-shrink: 0;
   margin-right: 16px;
   z-index: 1;
@@ -571,7 +572,7 @@ onUnmounted(() => {
 
 .timeline-desc {
   font-size: 14px;
-  color: var(--ink-text-primary);
+  color: var(--ink-text-title);
   margin: 0;
   display: inline;
 }
@@ -603,7 +604,7 @@ onUnmounted(() => {
   }
   
   .welcome-left h1 {
-    font-size: 22px;
+    font-size: 24px;
   }
   
   .stats-grid {
@@ -612,6 +613,29 @@ onUnmounted(() => {
   
   .module-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .stat-number {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-container {
+    padding: 12px;
+  }
+  
+  .welcome-card {
+    padding: 20px;
+  }
+  
+  .welcome-left h1 {
+    font-size: 22px;
+  }
+  
+  .stat-card,
+  .module-card {
+    padding: 16px;
   }
   
   .stat-number {

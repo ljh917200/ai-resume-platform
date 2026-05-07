@@ -1,6 +1,5 @@
 <template>
   <div class="application-board">
-    <!-- 页面标题 -->
     <div class="page-header">
       <h2>投递看板</h2>
       <div class="header-actions">
@@ -13,9 +12,7 @@
       </div>
     </div>
 
-    <!-- 看板主体 -->
     <div class="board-container">
-      <!-- 5列看板 -->
       <div 
         v-for="column in columns" 
         :key="column.key"
@@ -28,7 +25,6 @@
           <span class="column-count">{{ getColumnData(column.key).length }}</span>
         </div>
         <div class="column-body">
-          <!-- 卡片列表 -->
           <div
               v-for="(item, index) in getColumnData(column.key)"
               :key="item.id"
@@ -45,7 +41,6 @@
               <div class="card-job">{{ item.jobTitle }}</div>
               <div class="card-date">{{ formatDate(item.applyDate) }}</div>
               
-              <!-- 面试进度条 -->
               <div v-if="isInterviewStatus(item.status)" class="interview-progress">
                 <div 
                   v-for="(step, stepIndex) in interviewSteps" 
@@ -79,7 +74,6 @@
             </div>
           </div>
           
-          <!-- 空状态 -->
           <div v-if="getColumnData(column.key).length === 0" class="empty-state">
             <div class="empty-icon">
               <svg viewBox="0 0 64 64" fill="none">
@@ -91,7 +85,6 @@
           </div>
         </div>
         
-        <!-- 新增按钮 -->
         <div class="column-footer">
           <button class="btn-add" @click="handleAddWithStatus(column.key)">
             <el-icon><Plus /></el-icon> 新增
@@ -100,7 +93,6 @@
       </div>
     </div>
 
-    <!-- 详情弹窗 -->
     <el-dialog v-model="detailVisible" title="投递详情" width="600px">
       <el-descriptions :column="2" border v-if="detailData">
         <el-descriptions-item label="公司名称">{{ detailData.companyName }}</el-descriptions-item>
@@ -122,7 +114,6 @@
       </template>
     </el-dialog>
 
-    <!-- 新增/编辑弹窗 -->
     <ApplicationForm
         v-model:visible="formVisible"
         :edit-data="editData"
@@ -132,25 +123,25 @@
   </div>
 </template>
 
-<script setup>import { ref, onMounted } from 'vue';
+<script setup>
+import { ref, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, List } from '@element-plus/icons-vue';
 import { getApplications, updateApplicationStatus, deleteApplication } from '@/api/application';
 import ApplicationForm from './ApplicationForm.vue';
-// ====== 数据 ======
+
 const allData = ref([]);
 const loading = ref(false);
-// 弹窗控制
+
 const formVisible = ref(false);
 const editData = ref(null);
 const detailVisible = ref(false);
 const detailData = ref(null);
 const defaultStatus = ref('interested');
-// 面试相关状态
+
 const interviewStatuses = ['screening', 'test', 'first_interview', 'second_interview', 'hr_interview'];
-// 已结束状态
 const endedStatuses = ['rejected', 'withdrawn'];
-// 状态中文名映射
+
 const statusMap = {
  interested: '感兴趣',
  applied: '已投递',
@@ -163,7 +154,7 @@ const statusMap = {
  rejected: '已拒绝',
  withdrawn: '已撤回'
 };
-// 面试步骤
+
 const interviewSteps = [
  { key: 'screening', label: '筛选' },
  { key: 'test', label: '笔试' },
@@ -171,7 +162,7 @@ const interviewSteps = [
  { key: 'second_interview', label: '二面' },
  { key: 'hr_interview', label: 'HR面' }
 ];
-// 列配置
+
 const columns = [
  { key: 'interested', title: '感兴趣' },
  { key: 'applied', title: '已投递' },
@@ -179,35 +170,29 @@ const columns = [
  { key: 'offer', title: '已Offer' },
  { key: 'ended', title: '已结束' }
 ];
-/** 状态值转中文 */
+
 function statusLabel(status) { return statusMap[status] || status; }
-/** 判断是否面试中状态 */
+
 function isInterviewStatus(status) {
  return interviewStatuses.includes(status);
 }
-/** 获取状态对应的CSS类 */
+
 function getStatusClass(status) {
- if (status === 'interested')
- return 'status-interested';
- if (status === 'applied')
- return 'status-applied';
- if (interviewStatuses.includes(status))
- return 'status-interview';
- if (status === 'offer_received')
- return 'status-offer';
+ if (status === 'interested') return 'status-interested';
+ if (status === 'applied') return 'status-applied';
+ if (interviewStatuses.includes(status)) return 'status-interview';
+ if (status === 'offer_received') return 'status-offer';
  return 'status-ended';
 }
-/** 获取步骤样式类 */
+
 function getStepClass(currentStatus, stepKey) {
  const currentIndex = interviewSteps.findIndex(s => s.key === currentStatus);
  const stepIndex = interviewSteps.findIndex(s => s.key === stepKey);
- if (stepIndex < currentIndex)
- return 'step-done';
- if (stepIndex === currentIndex)
- return 'step-current';
+ if (stepIndex < currentIndex) return 'step-done';
+ if (stepIndex === currentIndex) return 'step-current';
  return 'step-pending';
 }
-/** 获取下一个状态 */
+
 function getNextStatus(status) {
  const order = ['interested', 'applied', 'screening', 'test', 'first_interview', 'second_interview', 'hr_interview'];
  const index = order.indexOf(status);
@@ -216,7 +201,7 @@ function getNextStatus(status) {
  }
  return null;
 }
-/** 获取下一步按钮文字 */
+
 function getNextLabel(status) {
  const nextStatus = getNextStatus(status);
  if (nextStatus) {
@@ -224,14 +209,12 @@ function getNextLabel(status) {
  }
  return '下一步';
 }
-/** 格式化日期 */
+
 function formatDate(dt) {
- if (!dt)
- return '';
+ if (!dt) return '';
  return dt.substring(0, 10);
 }
-// ====== 列数据计算 ======
-/** 按列获取数据 */
+
 function getColumnData(columnKey) {
  switch (columnKey) {
  case 'interested':
@@ -248,7 +231,7 @@ function getColumnData(columnKey) {
  return [];
  }
 }
-// ====== 数据加载 ======
+
 async function loadBoardData() {
  loading.value = true;
  try {
@@ -256,44 +239,45 @@ async function loadBoardData() {
  if (res.code === 200) {
  allData.value = res.data.list || [];
  }
- }
- catch (e) {
+ } catch (e) {
  console.error('加载看板数据失败', e);
- }
- finally {
+ } finally {
  loading.value = false;
  }
 }
-// ====== 操作 ======
+
 function handleAdd() {
  defaultStatus.value = 'interested';
  editData.value = null;
  formVisible.value = true;
 }
+
 function handleAddWithStatus(status) {
  defaultStatus.value = status === 'interviewing' ? 'screening' : status === 'offer' ? 'offer_received' : status;
  editData.value = null;
  formVisible.value = true;
 }
+
 function handleView(item) {
  detailData.value = item;
  detailVisible.value = true;
 }
+
 function handleEditFromDetail() {
  detailVisible.value = false;
  editData.value = { ...detailData.value };
  formVisible.value = true;
 }
+
 async function handleDeleteFromDetail() {
  try {
  await ElMessageBox.confirm('确定删除这条投递记录？', '提示', { type: 'warning' });
  detailVisible.value = false;
  await doDelete(detailData.value.id);
- }
- catch {
- // 用户取消
+ } catch {
  }
 }
+
 async function moveToStatus(item, newStatus) {
  try {
  const res = await updateApplicationStatus(item.id, newStatus);
@@ -301,20 +285,19 @@ async function moveToStatus(item, newStatus) {
  ElMessage.success(`已移至「${statusLabel(newStatus)}」`);
  await loadBoardData();
  }
- }
- catch (e) {
+ } catch (e) {
  ElMessage.error('状态更新失败');
  }
 }
+
 async function handleDelete(item) {
  try {
  await ElMessageBox.confirm('确定删除这条投递记录？', '提示', { type: 'warning' });
  await doDelete(item.id);
- }
- catch {
- // 用户取消
+ } catch {
  }
 }
+
 async function doDelete(id) {
  try {
  const res = await deleteApplication(id);
@@ -322,11 +305,11 @@ async function doDelete(id) {
  ElMessage.success('已删除');
  await loadBoardData();
  }
- }
- catch (e) {
+ } catch (e) {
  ElMessage.error('删除失败');
  }
 }
+
 onMounted(() => {
  loadBoardData();
 });
@@ -334,10 +317,10 @@ onMounted(() => {
 
 <style scoped>
 .application-board {
-  padding: 24px;
+  padding: 32px;
   background: #f5f5f5;
   min-height: calc(100vh - 60px);
-  padding-top: 84px;
+  padding-top: 88px;
 }
 
 .page-header {
@@ -359,7 +342,7 @@ onMounted(() => {
   font-size: 22px;
   color: var(--ink-text-title);
   font-family: var(--ink-font-serif);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .header-actions {
@@ -372,7 +355,7 @@ onMounted(() => {
   gap: 16px;
   overflow-x: auto;
   padding-bottom: 24px;
-  height: calc(100vh - 192px);
+  height: calc(100vh - 196px);
 }
 
 .board-column {
@@ -390,7 +373,7 @@ onMounted(() => {
   background: #f7f7f7;
 }
 
-.board-column.offer {
+.board-column.ended {
   background: #fafafa;
 }
 
@@ -405,7 +388,7 @@ onMounted(() => {
 .column-bar {
   width: 2px;
   height: 20px;
-  background: #999;
+  background: #ccc;
   margin-right: 10px;
 }
 
@@ -476,7 +459,7 @@ onMounted(() => {
   opacity: 0;
   animation: cardEnter 300ms var(--ink-ease) both;
   animation-delay: var(--stagger-delay);
-  transition: all 0.3s var(--ink-ease);
+  transition: all var(--ink-transition-normal);
 }
 
 .board-card:hover {
@@ -629,10 +612,11 @@ onMounted(() => {
 
 .card-actions {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 4px;
   padding-top: 12px;
   border-top: 1px solid #f5f5f5;
+  justify-content: flex-end;
+  white-space: nowrap;
 }
 
 .btn-next {
@@ -649,17 +633,21 @@ onMounted(() => {
 }
 
 .btn-offer {
-  border-color: #67c23a !important;
-  color: #67c23a !important;
+  border-color: #52c41a !important;
+  color: #52c41a !important;
   font-size: 12px;
   height: 28px;
   padding: 0 10px;
   border-radius: 8px !important;
 }
 
+.btn-offer:hover {
+  background: rgba(82, 196, 26, 0.1) !important;
+}
+
 .btn-reject {
-  border-color: #c75b5b !important;
-  color: #c75b5b !important;
+  border-color: #999 !important;
+  color: #666 !important;
   font-size: 12px;
   height: 28px;
   padding: 0 10px;
@@ -667,12 +655,12 @@ onMounted(() => {
 }
 
 .btn-delete {
-  color: #999 !important;
+  color: #ff4d4f !important;
   font-size: 12px;
 }
 
 .btn-delete:hover {
-  color: #c75b5b !important;
+  color: #d93636 !important;
 }
 
 .empty-state {

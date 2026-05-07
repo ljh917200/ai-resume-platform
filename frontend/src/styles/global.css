@@ -183,7 +183,7 @@ a:hover {
   }
   to {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(0);
   }
 }
 

@@ -1,28 +1,46 @@
 <template>
-  <div class="login-page">
-    <!-- 左侧装饰区 -->
-    <div class="login-left">
+  <div class="auth-page">
+    <!-- 左侧品牌展示区 -->
+    <div class="brand-section">
       <div class="ink-decoration ink-1"></div>
       <div class="ink-decoration ink-2"></div>
       <div class="ink-decoration ink-3"></div>
-      <div class="brand-section">
-        <div class="logo-icon">
-          <span class="logo-text-inner">墨</span>
+      
+      <div class="brand-content">
+        <div class="logo-wrapper">
+          <div class="logo-icon">
+            <span class="logo-text">墨</span>
+          </div>
         </div>
         <h1 class="brand-title">AI求职助手</h1>
-        <p class="brand-desc">智能简历优化，助力职场进阶</p>
+        <p class="brand-slogan">以墨为笔，书写前程</p>
+        
+        <div class="features">
+          <div class="feature-item">
+            <div class="feature-icon">✦</div>
+            <span class="feature-text">智能简历优化</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">✦</div>
+            <span class="feature-text">岗位精准匹配</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">✦</div>
+            <span class="feature-text">面试全程陪练</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- 右侧登录区 -->
-    <div class="login-right">
-      <div class="login-card">
+    <!-- 右侧表单区 -->
+    <div class="form-section">
+      <div class="form-card">
         <div class="card-header">
-          <h2 class="card-title">登录</h2>
-          <p class="card-subtitle">欢迎回来，请登录您的账号</p>
+          <h2 class="form-title">登录</h2>
+          <p class="form-subtitle">欢迎回来</p>
         </div>
 
-        <el-form ref="loginFormRef" :model="loginForm" :rules="rules" class="login-form">
+        <el-form ref="loginFormRef" :model="loginForm" :rules="rules" class="auth-form">
           <!-- 登录方式切换 -->
           <div class="login-tabs">
             <div
@@ -39,7 +57,7 @@
             </div>
           </div>
 
-          <!-- 用户名/邮箱输入 -->
+          <!-- 账号输入 -->
           <el-form-item prop="account">
             <el-input
                 v-model="loginForm.account"
@@ -82,7 +100,7 @@
         </el-form>
 
         <!-- 注册链接 -->
-        <div class="register-link">
+        <div class="auth-link">
           <span>还没有账号？</span>
           <router-link to="/register" class="link-primary">立即注册</router-link>
         </div>
@@ -92,11 +110,11 @@
 </template>
 
 <script setup>
-import {ref, reactive} from 'vue'
-import {useRouter} from 'vue-router'
-import {ElMessage} from 'element-plus'
-import {User, Lock, Message} from '@element-plus/icons-vue'
-import {loginByUsername, loginByEmail} from '@/api/auth'
+import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { User, Lock, Message } from '@element-plus/icons-vue'
+import { loginByUsername, loginByEmail } from '@/api/auth'
 
 const router = useRouter()
 
@@ -110,18 +128,16 @@ const loginForm = reactive({
   password: ''
 })
 
-// 表单校验规则
 const rules = {
   account: [
-    {required: true, message: '请输入账号', trigger: 'blur'}
+    { required: true, message: '请输入账号', trigger: 'blur' }
   ],
   password: [
-    {required: true, message: '请输入密码', trigger: 'blur'}
+    { required: true, message: '请输入密码', trigger: 'blur' }
   ]
 }
 
 const handleLogin = async () => {
-  // 先做表单校验
   try {
     await loginFormRef.value.validate()
   } catch {
@@ -156,59 +172,73 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-.login-page {
+/* ========== 整体布局 ========== */
+.auth-page {
   display: flex;
   min-height: 100vh;
+  overflow: hidden;
 }
 
-/* 左侧装饰区 */
-.login-left {
-  width: 55%;
-  background: linear-gradient(135deg, #1a1a2e 0%, #2c3e50 100%);
+/* ========== 左侧品牌展示区 ========== */
+.brand-section {
+  width: 50%;
+  background: #fafafa;
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: fadeInLeft 0.6s ease-out both;
 }
 
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 水墨装饰背景 */
 .ink-decoration {
   position: absolute;
   border-radius: 50%;
   opacity: 0;
+  background: radial-gradient(circle, rgba(26, 26, 46, 0.08) 0%, rgba(26, 26, 46, 0.03) 50%, transparent 70%);
 }
 
 .ink-1 {
-  width: 600px;
-  height: 600px;
-  top: 20%;
-  left: 10%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 40%, transparent 70%);
-  animation: inkSpread 2s ease-out 0.5s both;
+  width: 500px;
+  height: 500px;
+  top: 10%;
+  left: -10%;
+  animation: inkSpread 2s ease-out 0.3s both;
 }
 
 .ink-2 {
-  width: 400px;
-  height: 400px;
-  bottom: 10%;
-  right: 15%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 50%, transparent 70%);
-  animation: inkSpread 2s ease-out 1s both;
+  width: 350px;
+  height: 350px;
+  bottom: 15%;
+  right: -5%;
+  animation: inkSpread 2s ease-out 0.8s both;
 }
 
 .ink-3 {
-  width: 300px;
-  height: 300px;
+  width: 250px;
+  height: 250px;
   top: 50%;
-  right: 5%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
-  animation: inkSpread 2s ease-out 1.5s both;
+  left: 30%;
+  background: radial-gradient(circle, rgba(26, 26, 46, 0.05) 0%, transparent 60%);
+  animation: inkSpread 2s ease-out 1.3s both;
 }
 
 @keyframes inkSpread {
   from {
     opacity: 0;
-    transform: scale(0.5);
+    transform: scale(0.3);
   }
   to {
     opacity: 1;
@@ -216,60 +246,108 @@ const handleLogin = async () => {
   }
 }
 
-.brand-section {
+/* 品牌内容 */
+.brand-content {
   text-align: center;
   z-index: 1;
+  padding: 40px;
+}
+
+.logo-wrapper {
+  margin-bottom: 24px;
 }
 
 .logo-icon {
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--ink-text-title);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0 auto;
+  box-shadow: 0 4px 20px rgba(26, 26, 46, 0.15);
 }
 
-.logo-text-inner {
+.logo-text {
   color: #fff;
-  font-family: 'Noto Serif SC', Georgia, serif;
-  font-size: 28px;
+  font-family: var(--ink-font-serif);
+  font-size: 36px;
   font-weight: 600;
 }
 
 .brand-title {
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 700;
-  color: #fff;
-  font-family: 'Noto Serif SC', Georgia, serif;
+  color: var(--ink-text-title);
+  font-family: var(--ink-font-serif);
   margin-bottom: 12px;
 }
 
-.brand-desc {
+.brand-slogan {
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.7);
+  color: #999;
+  margin-bottom: 40px;
 }
 
-/* 右侧登录区 */
-.login-right {
-  width: 45%;
-  background: #f5f5f5;
+/* 特性列表 */
+.features {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+}
+
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(26, 26, 46, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--ink-text-title);
+}
+
+.feature-text {
+  font-size: 13px;
+  color: #666;
+}
+
+/* ========== 右侧表单区 ========== */
+.form-section {
+  width: 50%;
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px;
+  animation: fadeInRight 0.6s ease-out 0.1s both;
 }
 
-.login-card {
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.form-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 380px;
   background: #fff;
-  border-radius: 16px;
   padding: 40px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
 }
 
 .card-header {
@@ -277,15 +355,15 @@ const handleLogin = async () => {
   margin-bottom: 32px;
 }
 
-.card-title {
+.form-title {
   font-size: 24px;
   font-weight: 600;
-  color: #1a1a2e;
-  font-family: 'Noto Serif SC', Georgia, serif;
+  color: var(--ink-text-title);
+  font-family: var(--ink-font-serif);
   margin-bottom: 8px;
 }
 
-.card-subtitle {
+.form-subtitle {
   font-size: 14px;
   color: #999;
 }
@@ -293,7 +371,6 @@ const handleLogin = async () => {
 /* 登录方式切换 */
 .login-tabs {
   display: flex;
-  margin-bottom: 24px;
   background: #f7f8fa;
   border-radius: 8px;
   padding: 4px;
@@ -312,22 +389,46 @@ const handleLogin = async () => {
 
 .tab-item.active {
   background: #fff;
-  color: #1a1a2e;
+  color: var(--ink-text-title);
   font-weight: 500;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* ========== 表单样式 ========== */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 /* 输入框 */
 .input-ink {
   height: 44px;
+}
+
+.input-ink :deep(.el-input__wrapper) {
   border-radius: 8px;
   border: 1px solid #e8e8e8;
+  background: #f7f8fa;
+  padding: 0 14px;
   transition: all 0.3s ease;
 }
 
-.input-ink:focus {
-  border-color: #1a1a2e;
+.input-ink:focus :deep(.el-input__wrapper) {
+  border-color: var(--ink-text-title);
   box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.08);
+  background: #fff;
+}
+
+.input-ink :deep(.el-input__inner) {
+  height: 44px;
+  line-height: 44px;
+  padding: 0;
+  background: transparent;
+}
+
+.input-ink :deep(.el-input__inner)::placeholder {
+  color: #ccc;
 }
 
 /* 表单底部 */
@@ -335,7 +436,6 @@ const handleLogin = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
 }
 
 .remember-checkbox {
@@ -350,28 +450,30 @@ const handleLogin = async () => {
 .remember-checkbox input {
   width: 16px;
   height: 16px;
-  accent-color: #1a1a2e;
+  accent-color: var(--ink-text-title);
 }
 
 .forgot-link {
   font-size: 13px;
-  color: #1a1a2e;
+  color: #666;
   text-decoration: none;
 }
 
 .forgot-link:hover {
+  color: var(--ink-text-title);
   text-decoration: underline;
 }
 
 /* 按钮 */
 .btn-primary-ink {
   height: 44px;
-  background: #1a1a2e !important;
-  border-color: #1a1a2e !important;
+  background: var(--ink-text-title) !important;
+  border-color: var(--ink-text-title) !important;
   color: #fff !important;
   border-radius: 8px !important;
   font-size: 15px !important;
   font-weight: 500 !important;
+  transition: all 0.2s ease !important;
 }
 
 .btn-primary-ink:hover {
@@ -379,8 +481,12 @@ const handleLogin = async () => {
   border-color: #151525 !important;
 }
 
-/* 注册链接 */
-.register-link {
+.btn-primary-ink:active {
+  transform: scale(0.98);
+}
+
+/* 底部链接 */
+.auth-link {
   text-align: center;
   margin-top: 24px;
   font-size: 14px;
@@ -388,33 +494,42 @@ const handleLogin = async () => {
 }
 
 .link-primary {
-  color: #1a1a2e;
+  color: #666;
   text-decoration: none;
-  font-weight: 500;
+  margin-left: 4px;
 }
 
 .link-primary:hover {
+  color: var(--ink-text-title);
   text-decoration: underline;
 }
 
-/* 响应式 */
+/* ========== 响应式 ========== */
 @media (max-width: 768px) {
-  .login-page {
-    flex-direction: column;
+  .brand-section {
+    display: none;
   }
 
-  .login-left {
+  .form-section {
     width: 100%;
-    min-height: 200px;
+    background: #fafafa;
+    position: relative;
   }
 
-  .login-right {
-    width: 100%;
-    padding: 24px;
+  .form-section::before {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: -10%;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(26, 26, 46, 0.05) 0%, transparent 60%);
   }
 
-  .brand-title {
-    font-size: 28px;
+  .form-card {
+    position: relative;
+    z-index: 1;
   }
 }
 </style>

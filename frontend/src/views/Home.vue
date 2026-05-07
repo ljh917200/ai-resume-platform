@@ -1,141 +1,94 @@
 <template>
   <div class="home-container">
-    <!-- 顶部导航栏 -->
-    <!--    <el-header class="top-nav">-->
-    <!--      <div class="logo">-->
-    <!--        <el-icon class="logo-icon"><i class="el-icon-s-operation"></i></el-icon>-->
-    <!--        <span>AI简历优化</span>-->
-    <!--      </div>-->
-    <!--      <el-dropdown>-->
-    <!--        &lt;!&ndash; ★ 改造：有头像显示头像，没头像显示首字母 &ndash;&gt;-->
-    <!--        <div class="user-avatar">-->
-    <!--          <el-avatar v-if="userAvatarUrl" :size="40" :src="userAvatarUrl" />-->
-    <!--          <el-avatar v-else :size="40">-->
-    <!--            {{ userName.charAt(0).toUpperCase() }}-->
-    <!--          </el-avatar>-->
-    <!--        </div>-->
-    <!--        <template #dropdown>-->
-    <!--          <el-dropdown-menu>-->
-    <!--            <el-dropdown-item @click="goProfile">个人中心</el-dropdown-item>-->
-    <!--            <el-dropdown-item @click="logout" divided>退出登录</el-dropdown-item>-->
-    <!--          </el-dropdown-menu>-->
-    <!--        </template>-->
-    <!--      </el-dropdown>-->
-    <!--    </el-header>-->
+    <!-- <div class="sub-header">
+      <div class="sub-header-content">
+        <h1 class="page-title">我的简历</h1>
+        <el-button type="primary" class="upload-btn" @click="scrollToUpload">
+          <el-icon><UploadFilled /></el-icon>
+          上传简历
+        </el-button>
+      </div>
+    </div> -->
 
-    <el-main>
-      <!-- 欢迎区域 -->
-      <div class="welcome-section">
-        <div class="welcome-content">
-          <h2>欢迎回来，{{ userName }}</h2>
+    <div class="content-wrapper">
+      <div class="welcome-card">
+        <div class="welcome-text">
+          <h2>欢迎回来</h2>
           <p class="welcome-subtitle">开始优化你的简历吧</p>
         </div>
-        <div class="stats-container">
-          <div class="stat-card">
-            <div class="stat-number">{{ resumeCount }}</div>
-            <div class="stat-label">已上传简历</div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-number">{{ resumeCount }}</span>
+            <span class="stat-label">简历数</span>
           </div>
-          <div class="stat-card">
-            <div class="stat-number">{{ optimizeCount }}</div>
-            <div class="stat-label">已优化次数</div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-number">{{ optimizeCount }}</span>
+            <span class="stat-label">优化次数</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-number">0</span>
+            <span class="stat-label">已用额度</span>
           </div>
         </div>
       </div>
 
-      <!-- 快捷操作区 -->
-      <div class="quick-actions">
-        <div class="action-card primary">
-          <div class="action-icon">
-            <el-icon><i class="el-icon-upload"></i></el-icon>
-          </div>
-          <h3>上传简历</h3>
-          <p>上传PDF或Word格式简历</p>
-          <el-upload
-              ref="uploadRef"
-              :auto-upload="false"
-              :on-change="handleFileChange"
-              :limit="1"
-              accept=".pdf,.docx"
-              drag
-              class="upload-area"
-          >
-            <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-            <div class="el-upload__text">
-              拖拽文件到此处，或<em>点击上传</em>
-            </div>
-            <template #tip>
-              <div class="el-upload__tip">支持 PDF、DOCX 格式，最大 5MB</div>
-            </template>
-          </el-upload>
-          <el-button type="primary" @click="handleUpload" :loading="uploading" class="action-button">
-            上传简历
-          </el-button>
-        </div>
-      </div>
-
-      <!-- 我的简历列表 -->
       <div class="resume-section">
-        <div class="section-header">
-          <h3 class="section-title">我的简历</h3>
-          <!-- 批量操作按钮（有选中时显示） -->
-          <div v-if="selectedIds.length > 0" class="batch-actions">
-            <span class="selected-count">已选择 {{ selectedIds.length }} 份</span>
-            <el-button size="small" class="btn-delete">批量删除</el-button>
-            <el-button size="small" class="btn-rename">取消选择</el-button>
-          </div>
-        </div>
-
-        <!-- 骨架屏加载状态 -->
         <div v-if="pageLoading" class="skeleton-grid">
           <div v-for="i in 3" :key="i" class="skeleton-card">
             <el-skeleton :rows="4" animated />
           </div>
         </div>
 
-        <!-- 空状态 -->
         <div v-else-if="resumeList.length === 0" class="empty-state">
-          <div class="empty-icon">📄</div>
-          <p class="empty-text">暂无简历，点击上传开始吧</p>
-          <el-button class="btn-view" @click="scrollToUpload">上传简历</el-button>
+          <div class="empty-icon">
+            <svg viewBox="0 0 120 80" class="scroll-svg">
+              <rect x="10" y="10" width="100" height="60" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="10" y1="25" x2="110" y2="25" stroke="currentColor" stroke-width="1" stroke-dasharray="4,2"/>
+              <line x1="10" y1="35" x2="110" y2="35" stroke="currentColor" stroke-width="1" stroke-dasharray="4,2"/>
+              <line x1="10" y1="45" x2="110" y2="45" stroke="currentColor" stroke-width="1" stroke-dasharray="4,2"/>
+              <line x1="10" y1="55" x2="110" y2="55" stroke="currentColor" stroke-width="1" stroke-dasharray="4,2"/>
+              <path d="M10 15 Q5 15 5 20" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M110 15 Q115 15 115 20" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M10 65 Q5 65 5 60" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M110 65 Q115 65 115 60" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <p class="empty-text">还没有简历，上传第一份吧</p>
+          <el-button type="primary" class="empty-btn" @click="scrollToUpload">上传简历</el-button>
         </div>
 
-        <!-- 简历卡片列表 -->
         <div v-else class="resume-grid">
-          <div v-for="resume in resumeList" :key="resume.id" class="resume-card" :class="{ 'selected': selectedIds.includes(resume.id) }">
-            <!-- 多选框 -->
-            <div class="select-checkbox">
-              <el-checkbox v-model="selectedIds" :label="resume.id" @change="handleSelectChange">
-                &nbsp;
-              </el-checkbox>
-            </div>
-
-            <div class="resume-header">
-              <div class="file-icon" :class="{ 'pdf': resume.fileFormat === 'pdf', 'docx': resume.fileFormat === 'docx' }">
-                <el-icon><i class="el-icon-document"></i></el-icon>
-              </div>
-              <div class="resume-info">
+          <div class="upload-card" @click="scrollToUpload">
+            <div class="upload-icon">+</div>
+            <span class="upload-text">上传简历</span>
+          </div>
+          <div 
+            v-for="(resume, index) in resumeList" 
+            :key="resume.id" 
+            class="resume-card"
+            :style="{ animationDelay: index * 80 + 'ms' }"
+          >
+            <div class="card-left-bar"></div>
+            <div class="card-content">
+              <div class="card-header">
+                <div class="file-icon-wrap">
+                  <span class="file-icon-text">📄</span>
+                </div>
                 <h4 class="file-name">{{ resume.displayName || resume.fileName }}</h4>
-                <div v-if="resume.displayName" class="original-name">原文件：{{ resume.fileName }}</div>
-                <div v-if="resume.targetRole" class="target-role-tag">{{ resume.targetRole }}</div>
               </div>
-            </div>
-
-            <!-- 状态标签 -->
-            <div class="resume-status">
-              <el-tag v-if="resume.optimizedStructuredData" type="success" size="small">已优化</el-tag>
-              <el-tag v-else type="info" size="small">待优化</el-tag>
-            </div>
-
-            <div class="resume-footer">
-              <div class="upload-time">{{ formatDate(resume.createdAt) }}</div>
-              <div class="resume-actions">
-                <el-button size="small" class="btn-view" @click="goPreview(resume.id)">
-                  查看简历
-                </el-button>
-                <el-button size="small" class="btn-rename" @click="openRenameDialog(resume)">重命名</el-button>
+              <div class="time-row">
+                <span class="upload-time">{{ formatDate(resume.createdAt) }}</span>
+                <el-tag v-if="resume.optimizedStructuredData" class="optimize-tag" size="small">已优化</el-tag>
+                <el-tag v-else class="optimize-tag pending" size="small">待优化</el-tag>
+              </div>
+              <div class="card-actions">
+                <el-button text size="small" class="action-btn preview" @click="goPreview(resume.id)">预览</el-button>
+                <el-button text size="small" class="action-btn optimize">优化</el-button>
                 <el-popconfirm title="确定删除这份简历？" @confirm="handleDelete(resume.id)">
                   <template #reference>
-                    <el-button size="small" class="btn-delete">删除</el-button>
+                    <el-button text size="small" class="action-btn delete">删除</el-button>
                   </template>
                 </el-popconfirm>
               </div>
@@ -143,26 +96,49 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- 上传全屏遮罩 -->
-      <transition name="fade">
-        <div v-if="uploading" class="upload-overlay">
-          <div class="upload-modal">
-            <div class="upload-animation">
-              <div class="upload-spinner"></div>
-            </div>
-            <h3 class="upload-title">正在上传简历</h3>
-            <p class="upload-desc">{{ uploadTip }}</p>
-            <div class="progress-bar">
-              <div class="progress-fill" :style="{ width: progressWidth }"></div>
-            </div>
+    <div ref="uploadAreaRef" class="upload-section">
+      <el-card class="upload-card-form" shadow="hover">
+        <template #header>
+          <span>上传简历</span>
+        </template>
+        <el-upload
+            ref="uploadRef"
+            :auto-upload="false"
+            :on-change="handleFileChange"
+            :limit="1"
+            accept=".pdf,.docx"
+            drag
+            class="upload-drop-area"
+        >
+          <div class="upload-hint">
+            <el-icon class="upload-icon-lg"><UploadFilled /></el-icon>
+            <p>拖拽文件到此处，或点击上传</p>
+            <span class="upload-tip">支持 PDF、DOCX 格式，最大 5MB</span>
+          </div>
+        </el-upload>
+        <el-button type="primary" @click="handleUpload" :loading="uploading" class="submit-upload-btn" :disabled="!selectedFile">
+          {{ uploading ? '上传中...' : '确认上传' }}
+        </el-button>
+      </el-card>
+    </div>
+
+    <transition name="fade">
+      <div v-if="uploading" class="upload-overlay">
+        <div class="upload-modal">
+          <div class="upload-animation">
+            <div class="upload-spinner"></div>
+          </div>
+          <h3 class="upload-title">正在上传简历</h3>
+          <p class="upload-desc">{{ uploadTip }}</p>
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: progressWidth }"></div>
           </div>
         </div>
-      </transition>
+      </div>
+    </transition>
 
-    </el-main>
-
-    <!-- 重命名弹窗 -->
     <el-dialog v-model="renameDialogVisible" title="重命名简历" width="400px">
       <el-input v-model="newDisplayName" placeholder="请输入新名称" maxlength="50" show-word-limit />
       <template #footer>
@@ -174,13 +150,6 @@
 </template>
 
 <script setup>
-/**
- * 首页（v1.8.0）
- *
- * 新增：导航栏显示用户头像
- * - 有头像时显示头像图片
- * - 没头像时显示用户名首字母
- */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -192,29 +161,23 @@ import {
   batchDeleteResume,
   renameResume
 } from '@/api/resume'
-// ★ 新增：导入获取用户信息的接口
 import { getUserProfile } from '@/api/user'
 
 const router = useRouter()
 
-// ========== 响应式数据 ==========
 const userName = ref(localStorage.getItem('username') || '用户')
-// ★ 新增：用户头像URL
-const userAvatarUrl = ref('')
 const resumeList = ref([])
-const selectedIds = ref([])
 const pageLoading = ref(false)
 const uploading = ref(false)
 const selectedFile = ref(null)
 const uploadRef = ref(null)
+const uploadAreaRef = ref(null)
 
-// 重命名相关
 const renameDialogVisible = ref(false)
 const newDisplayName = ref('')
 const currentResume = ref(null)
 const renaming = ref(false)
 
-// 上传动画相关
 const uploadTip = ref('正在解析简历内容...')
 const progressWidth = ref('0%')
 const uploadTips = [
@@ -226,42 +189,28 @@ const uploadTips = [
 let uploadTipInterval = null
 let uploadProgressInterval = null
 
-// ========== 计算属性 ==========
 const resumeCount = computed(() => resumeList.value.length)
 const optimizeCount = computed(() => resumeList.value.filter(r => r.optimizedStructuredData).length)
 
-// ========== 生命周期 ==========
 onMounted(() => {
   loadResumeList()
-  // ★ 加载用户头像
   loadUserProfile()
 })
 
-// ========== 方法 ==========
-
-/**
- * ★ 新增：加载用户信息（获取头像）
- */
 const loadUserProfile = async () => {
   try {
     const res = await getUserProfile()
     if (res.code === 200 && res.data) {
-      userAvatarUrl.value = res.data.avatarUrl || ''
-      // 同步更新 localStorage 中的用户名
       if (res.data.username) {
         userName.value = res.data.username
         localStorage.setItem('username', res.data.username)
       }
     }
   } catch (error) {
-    // 获取失败不影响主流程，头像显示首字母就行
     console.error('获取用户信息失败', error)
   }
 }
 
-/**
- * 加载简历列表
- */
 const loadResumeList = async () => {
   pageLoading.value = true
   try {
@@ -274,25 +223,16 @@ const loadResumeList = async () => {
   }
 }
 
-/**
- * 格式化日期
- */
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   const date = new Date(dateStr)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-/**
- * 选择文件
- */
 const handleFileChange = (file) => {
   selectedFile.value = file.raw
 }
 
-/**
- * 上传简历
- */
 const handleUpload = async () => {
   if (!selectedFile.value) {
     ElMessage.warning('请先选择文件')
@@ -347,25 +287,16 @@ const completeProgress = () => {
   progressWidth.value = '100%'
 }
 
-/**
- * 跳转到预览页面（核心入口）
- */
 const goPreview = (id) => {
   router.push(`/preview/${id}`)
 }
 
-/**
- * 打开重命名弹窗
- */
 const openRenameDialog = (resume) => {
   currentResume.value = resume
   newDisplayName.value = resume.displayName || resume.fileName?.replace(/\.[^.]+$/, '') || ''
   renameDialogVisible.value = true
 }
 
-/**
- * 重命名简历
- */
 const handleRename = async () => {
   if (!newDisplayName.value.trim()) {
     ElMessage.warning('名称不能为空')
@@ -389,9 +320,6 @@ const handleRename = async () => {
   }
 }
 
-/**
- * 删除简历
- */
 const handleDelete = async (id) => {
   try {
     const res = await deleteResume(id)
@@ -406,18 +334,14 @@ const handleDelete = async (id) => {
   }
 }
 
-/**
- * 批量删除
- */
 const handleBatchDelete = async () => {
   try {
-    await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 份简历吗？`, '提示', {
+    await ElMessageBox.confirm(`确定删除选中的简历吗？`, '提示', {
       type: 'warning'
     })
-    const res = await batchDeleteResume(selectedIds.value)
+    const res = await batchDeleteResume([])
     if (res.code === 200) {
       ElMessage.success('删除成功')
-      selectedIds.value = []
       await loadResumeList()
     } else {
       ElMessage.error(res.message || '删除失败')
@@ -429,360 +353,392 @@ const handleBatchDelete = async () => {
   }
 }
 
-const handleSelectChange = () => {
-}
-const clearSelection = () => {
-  selectedIds.value = []
-}
 const scrollToUpload = () => {
-  document.querySelector('.upload-area')?.scrollIntoView({behavior: 'smooth'})
+  uploadAreaRef.value?.scrollIntoView({ behavior: 'smooth' })
 }
-const goProfile = () => router.push('/profile')
-const logout = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('username')
-  router.push('/login')
-}
-
 </script>
 
 <style scoped>
-/* ========== 整体布局 ========== */
 .home-container {
   min-height: 100vh;
-  background: #f7f7f7;
+  background: #f5f5f5;
 }
 
-.el-main {
-  padding: 24px;
+.sub-header {
+  position: sticky;
+  /* top: 60px; */
+  z-index: 100;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
 }
 
-/* ========== 欢迎区域 ========== */
-.welcome-section {
+.sub-header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+  height: 48px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 28px 32px;
-  background: #fff;
-  border-radius: var(--ink-radius-lg);
-  border: 1px solid var(--ink-border);
-  margin-bottom: 24px;
 }
 
-.welcome-content h2 {
-  margin: 0 0 8px 0;
-  font-size: 22px;
-  color: var(--ink-text-title);
+.page-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-primary);
+}
+
+.upload-btn {
+  background: var(--ink-primary) !important;
+  border-color: var(--ink-primary) !important;
+  border-radius: 8px;
+  padding: 6px 16px;
+}
+
+.content-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.welcome-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.welcome-text h2 {
+  margin: 0;
+  font-size: 24px;
   font-family: var(--ink-font-serif);
+  color: var(--ink-primary);
 }
 
 .welcome-subtitle {
-  margin: 0;
-  color: var(--ink-text-secondary);
+  margin: 8px 0 0 0;
   font-size: 14px;
+  color: #999;
 }
 
-.stats-container {
+.stats-row {
   display: flex;
+  align-items: center;
   gap: 32px;
 }
 
-.stat-card {
+.stat-item {
   text-align: center;
-  padding: 14px 28px;
 }
 
 .stat-number {
-  font-size: 30px;
-  font-weight: 700;
-  color: var(--ink-text-title);
+  display: block;
+  font-size: 24px;
   font-family: var(--ink-font-serif);
+  color: var(--ink-primary);
 }
 
 .stat-label {
+  display: block;
   font-size: 12px;
-  color: var(--ink-text-secondary);
+  color: #999;
   margin-top: 4px;
 }
 
-/* ========== 快捷操作区 ========== */
-.quick-actions {
-  margin-bottom: 24px;
+.stat-divider {
+  width: 1px;
+  height: 40px;
+  background: #e8e8e8;
 }
 
-.action-card {
-  background: #fff;
-  border-radius: var(--ink-radius-lg);
-  border: 2px dashed var(--ink-primary);
-  padding: 32px;
-  text-align: center;
-  transition: all 0.3s ease;
-}
-
-.action-card:hover {
-  background: var(--ink-text-title);
-  border-color: var(--ink-text-title);
-}
-
-.action-card h3 {
-  margin: 12px 0 6px 0;
-  font-size: 16px;
-  color: var(--ink-text-title);
-  font-weight: 600;
-}
-
-.action-card:hover h3 {
-  color: #fff;
-}
-
-.action-card p {
-  color: var(--ink-text-secondary);
-  margin: 0 0 16px 0;
-  font-size: 13px;
-}
-
-.action-card:hover p {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.upload-area {
-  margin-bottom: 16px;
-}
-
-.action-card:hover .el-upload__text,
-.action-card:hover .el-upload__tip {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.action-card:hover .el-icon--upload {
-  color: #fff;
-}
-
-.action-button {
-  width: 100%;
-  background: transparent;
-  border: 1px solid var(--ink-primary);
-  color: var(--ink-primary);
-  border-radius: var(--ink-radius-md);
-}
-
-.action-card:hover .action-button {
-  background: #fff;
-  color: var(--ink-text-title);
-}
-
-/* ========== 简历列表 ========== */
 .resume-section {
-  background: #fff;
-  border-radius: var(--ink-radius-lg);
-  padding: 24px;
-  border: 1px solid var(--ink-border);
+  margin-bottom: 32px;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--ink-border);
-}
-
-.section-title {
-  margin: 0;
-  font-size: 18px;
-  color: var(--ink-text-title);
-  font-weight: 600;
-}
-
-.batch-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.selected-count {
-  color: var(--ink-text-secondary);
-  font-size: 14px;
-}
-
-/* ========== 简历卡片 ========== */
 .resume-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+@media (max-width: 992px) {
+  .resume-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .resume-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .resume-card {
   background: #fff;
-  border-radius: var(--ink-radius-md);
-  padding: 18px;
-  border-left: 3px solid var(--ink-primary);
-  border-top: 1px solid var(--ink-border);
-  border-right: 1px solid var(--ink-border);
-  border-bottom: 1px solid var(--ink-border);
-  transition: all 0.3s ease;
+  border-radius: 12px;
+  overflow: hidden;
   position: relative;
+  animation: cardEnter 300ms var(--ink-ease) both;
 }
 
-.resume-card.selected {
-  border-color: var(--ink-primary);
-  background: rgba(44, 62, 80, 0.02);
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.resume-card:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-}
-
-.select-checkbox {
+.card-left-bar {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ink-primary);
+  transition: width 0.2s ease;
 }
 
-.resume-header {
+.resume-card:hover .card-left-bar {
+  width: 4px;
+}
+
+.card-content {
+  padding: 20px 24px;
+  margin-left: 3px;
+}
+
+.card-header {
   display: flex;
-  gap: 14px;
-  margin-bottom: 14px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
-.file-icon {
-  width: 44px;
-  height: 44px;
+.file-icon-wrap {
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--ink-radius-sm);
-  font-size: 18px;
-  background: rgba(44, 62, 80, 0.08);
-  color: var(--ink-primary);
+  background: #f7f8fa;
+  border-radius: 8px;
 }
 
-.resume-info {
-  flex: 1;
-  min-width: 0;
+.file-icon-text {
+  font-size: 18px;
 }
 
 .file-name {
+  flex: 1;
   margin: 0;
-  font-size: 15px;
-  color: var(--ink-text-title);
+  font-size: 16px;
+  color: var(--ink-primary);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.original-name {
-  font-size: 12px;
-  color: var(--ink-text-placeholder);
-  margin-top: 4px;
-}
-
-.target-role-tag {
-  font-size: 12px;
-  color: var(--ink-primary);
-  margin-top: 4px;
-  background: rgba(44, 62, 80, 0.08);
-  padding: 2px 8px;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-.resume-status {
-  margin-bottom: 14px;
-}
-
-.resume-status .el-tag {
-  border-color: var(--ink-border);
-  color: var(--ink-text-secondary);
-  background: transparent;
-}
-
-.resume-status .el-tag--success {
-  background: rgba(74, 155, 124, 0.1);
-  border-color: #4a9b7c;
-  color: #4a9b7c;
-}
-
-.resume-footer {
+.time-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 12px;
-  border-top: 1px solid #f5f5f5;
+  margin-bottom: 12px;
 }
 
 .upload-time {
+  font-size: 13px;
+  color: #999;
+}
+
+.optimize-tag {
   font-size: 12px;
-  color: var(--ink-text-placeholder);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--ink-primary);
+  color: #fff;
+  border: none;
 }
 
-.resume-actions {
+.optimize-tag.pending {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.card-actions {
   display: flex;
-  gap: 6px;
+  gap: 12px;
 }
 
-.btn-view {
-  background: var(--ink-text-title) !important;
-  border-color: var(--ink-text-title) !important;
-  color: #fff !important;
+.action-btn {
+  padding: 4px 0;
+  font-size: 13px;
 }
 
-.btn-rename {
-  border-color: var(--ink-border) !important;
-  color: var(--ink-text-secondary) !important;
-  background: transparent !important;
+.action-btn.preview {
+  color: var(--ink-primary);
 }
 
-.btn-rename:hover {
-  border-color: var(--ink-primary) !important;
-  color: var(--ink-primary) !important;
+.action-btn.optimize {
+  color: var(--ink-primary);
 }
 
-.btn-delete {
-  color: var(--ink-text-placeholder) !important;
-  border: none !important;
-  background: transparent !important;
+.action-btn.delete {
+  color: #999;
 }
 
-.btn-delete:hover {
-  color: var(--ink-danger) !important;
+.action-btn.delete:hover {
+  color: #666;
 }
 
-/* ========== 空状态 ========== */
+.resume-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(26, 26, 46, 0.08);
+  transition: all 0.2s ease;
+}
+
+.upload-card {
+  background: #fff;
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-card:hover {
+  border-color: var(--ink-primary);
+  background: #fafafa;
+}
+
+.upload-icon {
+  font-size: 32px;
+  color: #ccc;
+  margin-bottom: 8px;
+  transition: color 0.2s ease;
+}
+
+.upload-card:hover .upload-icon {
+  color: var(--ink-primary);
+}
+
+.upload-text {
+  font-size: 14px;
+  color: #999;
+}
+
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: 80px 20px;
 }
 
 .empty-icon {
-  font-size: 56px;
   margin-bottom: 16px;
-  opacity: 0.6;
+  color: #999;
+}
+
+.scroll-svg {
+  width: 120px;
+  height: 80px;
 }
 
 .empty-text {
-  color: var(--ink-text-secondary);
+  font-family: var(--ink-font-serif);
+  color: #999;
+  font-size: 16px;
   margin-bottom: 20px;
 }
 
-/* ========== 骨架屏 ========== */
+.empty-btn {
+  background: var(--ink-primary) !important;
+  border-color: var(--ink-primary) !important;
+  border-radius: 8px;
+}
+
 .skeleton-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+@media (max-width: 992px) {
+  .skeleton-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .skeleton-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .skeleton-card {
   background: #fff;
-  border-radius: var(--ink-radius-md);
-  padding: 18px;
-  border: 1px solid var(--ink-border);
+  border-radius: 12px;
+  padding: 20px;
 }
 
-/* ========== 上传遮罩 ========== */
+.upload-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px 32px;
+}
+
+.upload-card-form {
+  background: #fff;
+  border-radius: 12px;
+  border: none;
+}
+
+.upload-drop-area {
+  border: 2px dashed #e8e8e8;
+  border-radius: 12px;
+  padding: 48px;
+  margin-bottom: 20px;
+}
+
+.upload-hint {
+  text-align: center;
+}
+
+.upload-icon-lg {
+  font-size: 40px;
+  color: #999;
+  margin-bottom: 12px;
+}
+
+.upload-hint p {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+  color: #666;
+}
+
+.upload-tip {
+  font-size: 13px;
+  color: #999;
+}
+
+.submit-upload-btn {
+  width: 100%;
+  height: 44px;
+  background: var(--ink-primary) !important;
+  border-color: var(--ink-primary) !important;
+  border-radius: 8px;
+}
+
 .upload-overlay {
   position: fixed;
   top: 0;
@@ -798,11 +754,10 @@ const logout = () => {
 
 .upload-modal {
   background: #fff;
-  border-radius: var(--ink-radius-xl);
+  border-radius: 12px;
   padding: 40px 48px;
   text-align: center;
   min-width: 320px;
-  border: 1px solid var(--ink-border);
 }
 
 .upload-animation {
@@ -828,11 +783,11 @@ const logout = () => {
 .upload-title {
   margin: 0 0 8px 0;
   font-size: 18px;
-  color: var(--ink-text-title);
+  color: var(--ink-primary);
 }
 
 .upload-desc {
-  color: var(--ink-text-secondary);
+  color: #999;
   margin: 0 0 20px 0;
   font-size: 14px;
 }
@@ -851,7 +806,6 @@ const logout = () => {
   transition: width 0.3s ease;
 }
 
-/* ========== 过渡动画 ========== */
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.3s;
 }

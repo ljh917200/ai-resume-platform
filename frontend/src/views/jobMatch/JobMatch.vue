@@ -193,12 +193,12 @@ const canAnalyze = computed(() => {
   return form.value.resumeId && form.value.jobTitle.trim() && form.value.jobDescription.trim()
 })
 
-// 匹配度颜色
+// 匹配度颜色（水墨色系）
 const scoreColor = computed(() => {
   const score = currentResult.value?.matchScore || 0
-  if (score >= 75) return '#67C23A'
-  if (score >= 50) return '#E6A23C'
-  return '#F56C6C'
+  if (score >= 70) return 'var(--ink-primary)'
+  if (score >= 40) return 'var(--ink-secondary)'
+  return '#999'
 })
 
 // 匹配等级标签类型
@@ -335,10 +335,10 @@ const formatContent = (data) => {
 }
 
 
-// 分数对应的标签类型
+// 分数对应的标签类型（水墨色系）
 const getScoreType = (score) => {
-  if (score >= 75) return 'success'
-  if (score >= 50) return 'warning'
+  if (score >= 70) return 'success'
+  if (score >= 40) return 'warning'
   return 'danger'
 }
 
@@ -359,48 +359,130 @@ onMounted(() => {
 
 <style scoped>
 .job-match-container {
-  padding: 20px;
+  min-height: 100vh;
+  background: var(--ink-bg);
+  padding: 32px;
+}
+
+.job-match-container > * {
   max-width: 1200px;
-  margin: 0 auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .page-header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .page-header h2 {
-  margin: 0 0 6px 0;
+  margin: 0 0 8px 0;
   font-size: 22px;
+  font-family: var(--ink-font-serif);
+  color: var(--ink-primary);
 }
 
 .page-header .subtitle {
   margin: 0;
   font-size: 14px;
-  color: #909399;
+  color: #999;
 }
 
 .input-card,
 .result-card,
 .history-card {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  background: #fff;
+  border-radius: var(--ink-radius-card);
+  box-shadow: var(--ink-shadow-card);
+  border: none;
 }
 
-.analyze-tip {
-  margin-left: 12px;
+.input-card {
+  padding: 24px;
+}
+
+.input-card :deep(.el-form-item__label) {
+  color: var(--ink-text-secondary);
   font-size: 13px;
-  color: #909399;
+}
+
+.input-card :deep(.el-input__wrapper),
+.input-card :deep(.el-select__wrapper) {
+  border-radius: var(--ink-radius-btn);
+  border: 1px solid var(--ink-border);
+  background: #f7f8fa;
+}
+
+.input-card :deep(.el-textarea__inner) {
+  border-radius: var(--ink-radius-btn);
+  border: 1px solid var(--ink-border);
+  background: #f7f8fa;
+}
+
+.input-card .el-button--primary {
+  background: var(--ink-primary) !important;
+  border-color: var(--ink-primary) !important;
+  color: #fff !important;
+  border-radius: var(--ink-radius-btn);
+  padding: 10px 24px;
+  transition: all 0.2s ease;
+}
+
+.input-card .el-button--primary:hover:not(:disabled) {
+  transform: scale(1.02);
+}
+
+
+
+.analyze-tip {
+  margin-left: 16px;
+  font-size: 13px;
+  color: #999;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 /* 结果区域 */
+.result-card {
+  padding: 24px;
+  animation: resultEnter 300ms var(--ink-ease);
+}
+
+@keyframes resultEnter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .result-header {
   display: flex;
   align-items: center;
   gap: 12px;
   font-size: 16px;
   font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.result-header .el-tag {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  border: none;
+}
+
+.result-header .el-tag--success {
+  background: var(--ink-primary);
+  color: #fff;
+}
+
+.result-header .el-tag--warning {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.result-header .el-tag--danger {
+  background: #f7f7f7;
+  color: #999;
 }
 
 .score-section {
@@ -410,7 +492,11 @@ onMounted(() => {
 }
 
 .score-circle {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.score-circle :deep(.el-progress-circle__track) {
+  stroke: #f0f0f0;
 }
 
 .score-inner {
@@ -419,40 +505,168 @@ onMounted(() => {
 
 .score-num {
   display: block;
-  font-size: 36px;
+  font-size: 48px;
+  font-family: var(--ink-font-serif);
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1;
+  color: var(--ink-primary);
 }
 
 .score-label {
   display: block;
-  font-size: 13px;
-  color: #909399;
+  font-size: 14px;
+  color: #999;
 }
 
 .score-meta {
   text-align: center;
-  font-size: 14px;
-  color: #606266;
+  font-size: 13px;
+  color: #999;
 }
 
 .score-meta p {
-  margin: 2px 0;
+  margin: 4px 0;
+}
+
+.score-meta strong {
+  color: #666;
+}
+
+/* Tab区域 */
+:deep(.el-tabs__header) {
+  margin-bottom: 0;
+}
+
+:deep(.el-tabs__nav-wrap) {
+  border-bottom: 1px solid #e8e8e8;
+}
+
+:deep(.el-tabs__item) {
+  font-size: 14px;
+  color: #999;
+  margin-right: 24px;
+  padding-bottom: 8px;
+}
+
+:deep(.el-tabs__item.is-active) {
+  color: var(--ink-primary);
+  font-weight: 500;
+}
+
+:deep(.el-tabs__active-bar) {
+  background: var(--ink-primary);
+  height: 2px;
 }
 
 .tab-content {
-  padding: 8px 0;
+  padding: 16px 0;
   line-height: 1.8;
   font-size: 14px;
-  color: #303133;
+  color: var(--ink-text);
+  min-height: 150px;
+}
+
+.tab-content > div {
+  padding-left: 20px;
+}
+
+.tab-content > div > div {
+  position: relative;
+  padding-left: 16px;
+  margin: 12px 0;
+}
+
+.tab-content > div > div::before {
+  content: '●';
+  position: absolute;
+  left: 0;
+  color: var(--ink-primary);
+  font-size: 6px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 /* 历史区域 */
+.history-card {
+  padding: 24px;
+}
+
 .history-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 16px;
   font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.history-card :deep(.el-button--text) {
+  color: var(--ink-text-secondary);
+}
+
+.history-card :deep(.el-button--text):hover {
+  color: var(--ink-primary);
+}
+
+.history-card :deep(.el-table) {
+  border-radius: var(--ink-radius-card);
+  overflow: hidden;
+}
+
+.history-card :deep(.el-table__header-wrapper) {
+  background: #fafafa;
+}
+
+.history-card :deep(.el-table th) {
+  background: #fafafa;
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.history-card :deep(.el-table td) {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 14px 16px;
+}
+
+.history-card :deep(.el-table__row) {
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.history-card :deep(.el-table__row):hover {
+  transform: scale(1.005);
+}
+
+.history-card :deep(.el-tag--success) {
+  background: var(--ink-primary);
+  color: #fff;
+  border: none;
+}
+
+.history-card :deep(.el-tag--warning) {
+  background: #f0f0f0;
+  color: #666;
+  border: none;
+}
+
+.history-card :deep(.el-tag--danger) {
+  background: #f7f7f7;
+  color: #999;
+  border: none;
+}
+
+.history-card :deep(.el-table__empty-text) {
+  font-family: var(--ink-font-serif);
+  color: #999;
+  font-size: 16px;
+}
+
+.history-card :deep(.el-table__empty-wrapper)::after {
+  content: '选择简历和岗位后，开始你的第一次匹配分析';
+  display: block;
+  font-size: 13px;
+  color: #bbb;
+  margin-top: 8px;
 }
 </style>
