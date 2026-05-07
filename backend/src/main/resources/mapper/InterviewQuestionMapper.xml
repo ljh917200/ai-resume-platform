@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.resume.airesume.mapper.InterviewQuestionMapper">
+
+    <!-- 结果映射：数据库字段 → 实体类属性 -->
+    <resultMap id="BaseResultMap" type="com.resume.airesume.entity.InterviewQuestion">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="resumeId" column="resume_id"/>
+        <result property="applicationId" column="application_id"/>
+        <result property="jobTitle" column="job_title"/>
+        <result property="companyName" column="company_name"/>
+        <result property="jobDescription" column="job_description"/>
+        <result property="questionType" column="question_type"/>
+        <result property="questionText" column="question_text"/>
+        <result property="difficulty" column="difficulty"/>
+        <result property="hint" column="hint"/>
+        <result property="keyPoints" column="key_points"/>
+        <result property="answerDraft" column="answer_draft"/>
+        <result property="prepStatus" column="prep_status"/>
+        <result property="isSaved" column="is_saved"/>
+        <result property="deleted" column="deleted"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <!-- 基础列（公共引用） -->
+    <sql id="Base_Column_List">
+        id, user_id, resume_id, application_id, job_title, company_name,
+        job_description, question_type, question_text, difficulty,
+        hint, key_points, answer_draft, prep_status,
+        is_saved, deleted, create_time, update_time
+    </sql>
+
+    <!-- 新增面试题 -->
+    <insert id="insert" parameterType="com.resume.airesume.entity.InterviewQuestion"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO interview_question (
+        user_id, resume_id, application_id, job_title, company_name,
+        job_description, question_type, question_text, difficulty,
+        hint, key_points, answer_draft, prep_status,
+        is_saved, deleted
+        ) VALUES (
+        #{userId}, #{resumeId}, #{applicationId}, #{jobTitle}, #{companyName},
+        #{jobDescription}, #{questionType}, #{questionText}, #{difficulty},
+        #{hint}, #{keyPoints}, #{answerDraft}, #{prepStatus},
+        #{isSaved}, #{deleted}
+        )
+    </insert>
+
+    <!-- 根据ID查询面试题（过滤已删除） -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM interview_question
+        WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <!-- 查询用户的所有面试题（按创建时间倒序） -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM interview_question
+        WHERE user_id = #{userId} AND deleted = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 按题目类型查询用户的面试题 -->
+    <select id="selectByUserIdAndType" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM interview_question
+        WHERE user_id = #{userId} AND question_type = #{questionType} AND deleted = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 按准备状态查询用户的面试题 -->
+    <select id="selectByUserIdAndStatus" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM interview_question
+        WHERE user_id = #{userId} AND prep_status = #{prepStatus} AND deleted = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据ID更新面试题（只更新非空字段） -->
+    <update id="updateById" parameterType="com.resume.airesume.entity.InterviewQuestion">
+        UPDATE interview_question
+        <set>
+            <if test="answerDraft != null">answer_draft = #{answerDraft},</if>
+            <if test="prepStatus != null">prep_status = #{prepStatus},</if>
+            <if test="isSaved != null">is_saved = #{isSaved},</if>
+            <if test="questionText != null">question_text = #{questionText},</if>
+            <if test="hint != null">hint = #{hint},</if>
+            <if test="keyPoints != null">key_points = #{keyPoints},</if>
+            <if test="difficulty != null">difficulty = #{difficulty},</if>
+        </set>
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <!-- 逻辑删除面试题 -->
+    <update id="deleteById">
+        UPDATE interview_question SET deleted = 1 WHERE id = #{id}
+    </update>
+
+    <!-- 按准备状态分组统计数量 -->
+    <select id="selectStatsByStatus" resultType="java.util.Map">
+        SELECT prep_status AS status, COUNT(*) AS count
+        FROM interview_question
+        WHERE user_id = #{userId} AND deleted = 0
+        GROUP BY prep_status
+    </select>
+
+</mapper>

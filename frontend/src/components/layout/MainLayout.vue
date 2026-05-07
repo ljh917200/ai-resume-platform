@@ -137,7 +137,7 @@ const tabs = [
     dev: false
   },
   {
-    label: '岗位匹配',
+    label: '匹配分析',
     icon: Aim,
     path: '/job-match',
     matchPaths: ['/job-match'],

@@ -112,14 +112,27 @@
               </template>
             </el-table-column>
             <el-table-column prop="applyDate" label="投递日期" width="130" align="center" />
-            <el-table-column label="操作" width="240" align="center">
+            <!-- 把原来第115行的操作列替换 -->
+            <el-table-column label="操作" width="390" align="center">
               <template #default="{ row }">
                 <el-button link class="btn-edit" size="small" @click="handleEdit(row)">编辑</el-button>
-                <el-popconfirm 
-                  title="确定删除这条投递记录？" 
-                  @confirm="handleDelete(row)"
-                  confirm-button-text="删除"
-                  cancel-button-text="取消"
+                <el-button link class="btn-letter" size="small" @click="handleLetter(row)"
+                           :disabled="!row.jobDescription">
+                  生成求职信
+                </el-button>
+                <el-button link class="btn-interview" size="small" @click="handleInterview(row)"
+                           :disabled="!row.jobDescription">
+                  面试题
+                </el-button>
+                <el-button link class="btn-match" size="small" @click="handleMatch(row)"
+                           :disabled="!row.jobDescription">
+                  匹配分析
+                </el-button>
+                <el-popconfirm
+                    title="确定删除这条投递记录？"
+                    @confirm="handleDelete(row)"
+                    confirm-button-text="删除"
+                    cancel-button-text="取消"
                 >
                   <template #reference>
                     <el-button link class="btn-delete" size="small">删除</el-button>
@@ -127,6 +140,7 @@
                 </el-popconfirm>
               </template>
             </el-table-column>
+
           </el-table>
         </Transition>
 
@@ -223,6 +237,10 @@ import {
   updateApplicationStatus
 } from '@/api/application'
 import ApplicationForm from './ApplicationForm.vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
 
 // ====== 数据 ======
 const loading = ref(false)
@@ -267,6 +285,8 @@ const sourceOptions = [
   { value: '内推', label: '内推' },
   { value: '其他', label: '其他' }
 ]
+
+
 
 function statusTagClass(status) {
   const interviewStatuses = ['screening', 'test', 'first_interview', 'second_interview', 'hr_interview']
@@ -397,6 +417,46 @@ async function handleDelete(row) {
   }
 }
 
+// 匹配分析方法
+function handleMatch(row) {
+  router.push({
+    path: '/job-match',
+    query: {
+      jobTitle: row.jobTitle,
+      companyName: row.companyName,
+      jobDescription: row.jobDescription,
+      resumeId: row.resumeId || ''
+    }
+  })
+}
+
+// 生成求职信，跳转到求职信页面并自动回填
+function handleLetter(row) {
+  router.push({
+    path: '/cover-letter',
+    query: {
+      jobTitle: row.jobTitle,
+      companyName: row.companyName,
+      jobDescription: row.jobDescription,
+      resumeId: row.resumeId || ''
+    }
+  })
+}
+
+// 生成面试题，跳转到面试助手页面
+function handleInterview(row) {
+  router.push({
+    path: '/interview',
+    query: {
+      jobTitle: row.jobTitle,
+      companyName: row.companyName,
+      jobDescription: row.jobDescription,
+      resumeId: row.resumeId || ''
+    }
+  })
+}
+
+
 onMounted(() => {
   loadData()
 })
@@ -410,7 +470,7 @@ onMounted(() => {
 }
 
 .content-wrapper {
-  max-width: 1200px;
+  max-width: 1380px;
   margin: 0 auto;
 }
 
@@ -831,4 +891,36 @@ onMounted(() => {
     align-self: flex-start;
   }
 }
+
+.btn-match {
+  color: #409eff;
+}
+.btn-match:hover {
+  color: #66b1ff;
+}
+.btn-match.is-disabled {
+  color: #c0c4cc;
+  cursor: not-allowed;
+}
+.btn-letter {
+  color: #67C23A;
+}
+.btn-letter:hover {
+  color: #85CE61;
+}
+.btn-letter.is-disabled {
+  color: #c0c4cc;
+  cursor: not-allowed;
+}
+.btn-interview {
+  color: #E6A23C;
+}
+.btn-interview:hover {
+  color: #F0C78A;
+}
+.btn-interview.is-disabled {
+  color: #c0c4cc;
+  cursor: not-allowed;
+}
+
 </style>

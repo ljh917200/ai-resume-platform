@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.resume.airesume.mapper.JobMatchAnalysisMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.resume.airesume.entity.JobMatchAnalysis">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="resume_id" property="resumeId"/>
+        <result column="application_id" property="applicationId"/>
+        <result column="job_title" property="jobTitle"/>
+        <result column="company_name" property="companyName"/>
+        <result column="job_description" property="jobDescription"/>
+        <result column="job_requirement" property="jobRequirement"/>
+        <result column="match_score" property="matchScore"/>
+        <result column="match_level" property="matchLevel"/>
+        <result column="strengths" property="strengths"/>
+        <result column="weaknesses" property="weaknesses"/>
+        <result column="missing_skills" property="missingSkills"/>
+        <result column="suggestions" property="suggestions"/>
+        <result column="analysis_result" property="analysisResult"/>
+        <result column="keywords_match" property="keywordsMatch"/>
+        <result column="keywords_total" property="keywordsTotal"/>
+        <result column="experience_match" property="experienceMatch"/>
+        <result column="is_saved" property="isSaved"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 基础列 -->
+    <sql id="Base_Column_List">
+        id, user_id, resume_id, application_id,
+        job_title, company_name, job_description, job_requirement,
+        match_score, match_level, strengths, weaknesses, missing_skills,
+        suggestions, analysis_result, keywords_match, keywords_total,
+        experience_match, is_saved, create_time, update_time, deleted
+    </sql>
+
+    <!-- 插入 -->
+    <insert id="insert" parameterType="com.resume.airesume.entity.JobMatchAnalysis"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO job_match_analysis (
+        user_id, resume_id, application_id,
+        job_title, company_name, job_description, job_requirement,
+        match_score, match_level, strengths, weaknesses, missing_skills,
+        suggestions, analysis_result, keywords_match, keywords_total,
+        experience_match, is_saved
+        ) VALUES (
+        #{userId}, #{resumeId}, #{applicationId},
+        #{jobTitle}, #{companyName}, #{jobDescription}, #{jobRequirement},
+        #{matchScore}, #{matchLevel}, #{strengths}, #{weaknesses}, #{missingSkills},
+        #{suggestions}, #{analysisResult}, #{keywordsMatch}, #{keywordsTotal},
+        #{experienceMatch}, #{isSaved}
+        )
+    </insert>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM job_match_analysis
+        WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <!-- 查询用户分析历史 -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM job_match_analysis
+        WHERE user_id = #{userId} AND deleted = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 查询用户已保存的分析 -->
+    <select id="selectSavedByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM job_match_analysis
+        WHERE user_id = #{userId} AND is_saved = 1 AND deleted = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 更新 -->
+    <update id="update" parameterType="com.resume.airesume.entity.JobMatchAnalysis">
+        UPDATE job_match_analysis
+        <set>
+            <if test="matchScore != null">match_score = #{matchScore},</if>
+            <if test="matchLevel != null">match_level = #{matchLevel},</if>
+            <if test="strengths != null">strengths = #{strengths},</if>
+            <if test="weaknesses != null">weaknesses = #{weaknesses},</if>
+            <if test="missingSkills != null">missing_skills = #{missingSkills},</if>
+            <if test="suggestions != null">suggestions = #{suggestions},</if>
+            <if test="analysisResult != null">analysis_result = #{analysisResult},</if>
+            <if test="keywordsMatch != null">keywords_match = #{keywordsMatch},</if>
+            <if test="keywordsTotal != null">keywords_total = #{keywordsTotal},</if>
+            <if test="experienceMatch != null">experience_match = #{experienceMatch},</if>
+            <if test="isSaved != null">is_saved = #{isSaved},</if>
+        </set>
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <!-- 逻辑删除 -->
+    <update id="deleteById">
+        UPDATE job_match_analysis SET deleted = 1
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <!-- 统计用户分析次数 -->
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM job_match_analysis
+        WHERE user_id = #{userId} AND deleted = 0
+    </select>
+
+</mapper>

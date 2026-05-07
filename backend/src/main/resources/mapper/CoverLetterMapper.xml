@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.resume.airesume.mapper.CoverLetterMapper">
+
+    <!-- 结果映射：数据库字段 → 实体类属性 -->
+    <resultMap id="BaseResultMap" type="com.resume.airesume.entity.CoverLetter">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="resumeId" column="resume_id"/>
+        <result property="applicationId" column="application_id"/>
+        <result property="jobTitle" column="job_title"/>
+        <result property="companyName" column="company_name"/>
+        <result property="jobDescription" column="job_description"/>
+        <result property="letterContent" column="letter_content"/>
+        <result property="letterStyle" column="letter_style"/>
+        <result property="language" column="language"/>
+        <result property="isSaved" column="is_saved"/>
+        <result property="deleted" column="deleted"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <!-- 基础列（公共引用，避免重复写列名） -->
+    <sql id="Base_Column_List">
+        id, user_id, resume_id, application_id, job_title, company_name,
+        job_description, letter_content, letter_style, language,
+        is_saved, deleted, create_time, update_time
+    </sql>
+
+    <!-- 新增求职信记录 -->
+    <insert id="insert" parameterType="com.resume.airesume.entity.CoverLetter"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO cover_letter (
+        user_id, resume_id, application_id, job_title, company_name,
+        job_description, letter_content, letter_style, language,
+        is_saved, deleted
+        ) VALUES (
+        #{userId}, #{resumeId}, #{applicationId}, #{jobTitle}, #{companyName},
+        #{jobDescription}, #{letterContent}, #{letterStyle}, #{language},
+        #{isSaved}, #{deleted}
+        )
+    </insert>
+
+    <!-- 根据ID查询求职信（过滤已删除记录） -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM cover_letter
+        WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <!-- 查询用户的所有求职信（按创建时间倒序，过滤已删除） -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM cover_letter
+        WHERE user_id = #{userId} AND deleted = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据ID更新求职信（只更新非空字段） -->
+    <update id="updateById" parameterType="com.resume.airesume.entity.CoverLetter">
+        UPDATE cover_letter
+        <set>
+            <if test="letterContent != null">letter_content = #{letterContent},</if>
+            <if test="letterStyle != null">letter_style = #{letterStyle},</if>
+            <if test="language != null">language = #{language},</if>
+            <if test="isSaved != null">is_saved = #{isSaved},</if>
+            <if test="jobTitle != null">job_title = #{jobTitle},</if>
+            <if test="companyName != null">company_name = #{companyName},</if>
+            <if test="jobDescription != null">job_description = #{jobDescription},</if>
+        </set>
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <!-- 逻辑删除求职信记录 -->
+    <update id="deleteById">
+        UPDATE cover_letter SET deleted = 1 WHERE id = #{id}
+    </update>
+
+</mapper>

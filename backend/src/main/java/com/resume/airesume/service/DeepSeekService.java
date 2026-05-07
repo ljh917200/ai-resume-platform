@@ -360,6 +360,66 @@ public class DeepSeekService {
         return content.trim();
     }
 
+    /**
+     * 通用AI对话方法
+     * 用于岗位匹配分析等场景，支持自定义system prompt
+     *
+     * @param systemPrompt 系统提示词
+     * @param userContent  用户消息内容
+     * @param temperature  温度参数
+     * @return AI返回的文本内容
+     */
+    public String chat(String systemPrompt, String userContent, double temperature) {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", "deepseek-chat");
+
+        List<Map<String, String>> messages = new ArrayList<>();
+
+        Map<String, String> systemMessage = new HashMap<>();
+        systemMessage.put("role", "system");
+        systemMessage.put("content", systemPrompt);
+        messages.add(systemMessage);
+
+        Map<String, String> userMessage = new HashMap<>();
+        userMessage.put("role", "user");
+        userMessage.put("content", userContent);
+        messages.add(userMessage);
+
+        requestBody.put("messages", messages);
+        requestBody.put("temperature", temperature);
+        requestBody.put("max_tokens", 3000);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(deepSeekConfig.getKey());
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    deepSeekConfig.getUrl(),
+                    HttpMethod.POST,
+                    entity,
+                    Map.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> body = response.getBody();
+                List<Map<String, Object>> choices = (List<Map<String, Object>>) body.get("choices");
+                if (choices != null && !choices.isEmpty()) {
+                    Map<String, Object> firstChoice = choices.get(0);
+                    Map<String, String> message = (Map<String, String>) firstChoice.get("message");
+                    return message.get("content");
+                }
+            }
+            throw new RuntimeException("AI响应异常");
+        } catch (Exception e) {
+            throw new RuntimeException("AI调用失败：" + e.getMessage());
+        }
+    }
+
+
+
 
     /**
      * 生成简历HTML（v1.7.0新增）
